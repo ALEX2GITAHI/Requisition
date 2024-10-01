@@ -1,0 +1,95 @@
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Navbar Styling */
+.navbar {
+    background-color: #343a40;
+}
+
+.navbar .navbar-brand {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.navbar .nav-link {
+    color: #ffffff;
+}
+
+.navbar .nav-link:hover {
+    color: #dddddd;
+}
+
+/* Card Styling for Dashboard */
+.card {
+    border-radius: 10px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    font-size: 1.25rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.btn-primary {
+    border-radius: 20px;
+    padding: 10px 20px;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+/* Table Styling */
+.table {
+    margin-top: 20px;
+    border-collapse: collapse;
+    width: 100%;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table th, .table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.table th {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Footer */
+footer {
+    background-color: #343a40;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+/* Styles for Admin Dashboard */
+.card {
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); }
+
+.table th, .table td { 
+    vertical-align: middle; }
+    
+.list-group-item { border-radius: 5px; margin-bottom: 5px; }
+    
+.navbar { background-color: #007bff; color: white; }
+    
+.navbar a { color: white; font-weight: bold; }
+    
+.btn { border-radius: 5px; }
+
