@@ -3,6 +3,25 @@ include('header.php');
 include('db.php');
 ?>
 
+<style>
+    /* Set canvas size for the pie chart (Requisitions Chart) */
+    #requisitionsChart {
+        max-width: 100%; /* Make sure it is responsive */
+        width: 345px;    /* Reduced width for pie chart */
+        height: 300px;   /* Adjust height for pie chart */
+        margin: 0 auto;  /* Center the canvas */
+    }
+
+    /* Set canvas size for the bar chart (Groups Chart) */
+    #groupsChart {
+        max-width: 100%; /* Make sure it is responsive */
+        width: 650px;    /* Slightly reduced width for bar chart */
+        height: 700px;   /* Adjust height for bar chart */
+        margin: 0 auto;  /* Center the canvas */
+    }
+</style>
+
+
 <div class="container-fluid p-0"> <!-- Full-width container with no padding -->
     <div class="row">
         <div class="col-md-12">
@@ -39,17 +58,18 @@ include('db.php');
     <!-- Main content -->
     <div class="row mt-3">
         <div class="col-md-12">
-            <div class="card">
+            <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">System Overview</div>
                 <div class="card-body">
+                    <!-- Metrics Cards -->
                     <div class="row">
                         <div class="col-md-4">
-                            <div class="card bg-primary text-white mb-3">
+                            <div class="card bg-primary text-white mb-3 shadow">
                                 <div class="card-body">
                                     <h6 class="card-title">Total Users</h6>
                                     <p class="card-text">
                                         <?php
-                                        // Fetch total users from database
+                                        // Fetch total users from the database
                                         $result = $conn->query("SELECT COUNT(*) AS total_users FROM users");
                                         $row = $result->fetch_assoc();
                                         echo $row['total_users'];
@@ -59,7 +79,7 @@ include('db.php');
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card bg-success text-white mb-3">
+                            <div class="card bg-success text-white mb-3 shadow">
                                 <div class="card-body">
                                     <h6 class="card-title">Total Groups</h6>
                                     <p class="card-text">
@@ -74,7 +94,7 @@ include('db.php');
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card bg-info text-white mb-3">
+                            <div class="card bg-info text-white mb-3 shadow">
                                 <div class="card-body">
                                     <h6 class="card-title">Pending Requisitions</h6>
                                     <p class="card-text">
@@ -90,47 +110,72 @@ include('db.php');
                         </div>
                     </div>
 
-                    <!-- Requisitions Status Table -->
-                    <h5 class="mt-4">Requisitions Status</h5>
-                    <table class="table table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Group Name</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Last Updated</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            // Fetch requisitions and display here
-                            $result = $conn->query("SELECT r.id, g.group_name, r.total_amount, r.status, r.requisition_pdf, r.updated_at 
-                        FROM requisitions r 
-                        JOIN groups g ON r.group_id = g.id");
-
-                            if ($result->num_rows > 0) {
-                                while ($row = $result->fetch_assoc()) {
-                                    echo "<tr>
-                                        <td>{$row['id']}</td>
-                                        <td>{$row['group_name']}</td>
-                                        <td>{$row['total_amount']}</td>
-                                        <td>{$row['status']}</td>
-                                        <td>" . (isset($row['updated_at']) ? $row['updated_at'] : 'N/A') . "</td>
-                                    </tr>";
-                                }
-                            } else {
-                                echo "<tr><td colspan='5'>No requisitions found</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
+                    <!-- Charts Section -->
+                    <div class="row mt-1.5">
+                        <div class="col-md-6">
+                            <canvas id="requisitionsChart"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="groupsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php
-include('footer.php');
-?>
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Data for Requisitions Status
+    const requisitionsData = {
+        labels: ['Pending', 'Approved', 'Disapproved'],
+        datasets: [{
+            label: 'Requisitions Status',
+            data: [<?php
+                $pending = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status = 'Pending'")->fetch_assoc()['count'];
+                $approved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status LIKE '%Approved%'")->fetch_assoc()['count'];
+                $disapproved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status = 'Disapproved'")->fetch_assoc()['count'];
+                echo "$pending, $approved, $disapproved";
+            ?>],
+            backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
+        }]
+    };
+
+    // Data for Groups Chart
+    const groupsData = {
+        labels: [<?php
+            $groupNames = $conn->query("SELECT group_name FROM groups");
+            $labels = [];
+            while ($row = $groupNames->fetch_assoc()) {
+                $labels[] = "'".$row['group_name']."'";
+            }
+            echo implode(', ', $labels);
+        ?>],
+        datasets: [{
+            label: 'Groups Account Balance',
+            data: [<?php
+                $groupBalances = $conn->query("SELECT total_account_balance FROM groups");
+                $balances = [];
+                while ($row = $groupBalances->fetch_assoc()) {
+                    $balances[] = $row['total_account_balance'];
+                }
+                echo implode(', ', $balances);
+            ?>],
+            backgroundColor: ['#3498db', '#1abc9c', '#9b59b6']
+        }]
+    };
+
+    // Requisitions Chart (Pie chart)
+    const requisitionsChart = new Chart(document.getElementById('requisitionsChart'), {
+        type: 'pie',
+        data: requisitionsData
+    });
+
+    // Groups Chart (Bar chart)
+    const groupsChart = new Chart(document.getElementById('groupsChart'), {
+        type: 'bar',
+        data: groupsData
+    });
+</script>

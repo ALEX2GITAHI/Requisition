@@ -1,31 +1,33 @@
 <?php
 include('db.php');
 
-if (isset($_POST['group_id'])) {
-    $group_id = intval($_POST['group_id']);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $group_id = $_POST['group_id'];
     $group_name = $_POST['group_name'];
-    $account_balance = $_POST['total_account_balance'];
-    
-    // Check if a new logo is uploaded
-    if (isset($_FILES['group_logo']) && $_FILES['group_logo']['size'] > 0) {
-        $logo = file_get_contents($_FILES['group_logo']['tmp_name']);
-        // Update with logo
-        $query = "UPDATE groups SET group_name = ?, total_account_balance = ?, group_logo = ? WHERE id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sdsi", $group_name, $account_balance, $logo, $group_id);
-    } else {
-        // Update without logo
-        $query = "UPDATE groups SET group_name = ?, total_account_balance = ? WHERE id = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sdi", $group_name, $account_balance, $group_id);
+    $total_account_balance = $_POST['total_account_balance'];
+
+    // Validate inputs
+    if (empty($group_name) || empty($total_account_balance)) {
+        echo "Group name and account balance are required.";
+        exit;
     }
 
+    // Update group name and account balance without modifying the logo
+    $sql = "UPDATE groups SET group_name = ?, total_account_balance = ? WHERE id = ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sdi", $group_name, $total_account_balance, $group_id);
+
     if ($stmt->execute()) {
-        header("Location: manage_groups.php?success=Group updated successfully");
-        exit();
+        echo "Group updated successfully.";
+        header("Location: manage_groups.php");
     } else {
-        header("Location: manage_groups.php?error=Error updating group");
-        exit();
+        echo "Error updating group: " . $conn->error;
     }
+
+    $stmt->close();
+    $conn->close();
+} else {
+    echo "Invalid request method.";
 }
 ?>

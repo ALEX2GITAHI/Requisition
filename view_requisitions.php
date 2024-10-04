@@ -50,12 +50,13 @@ include('db.php');
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Last Updated</th>
+                                <th>PDF Preview</th> <!-- New column for PDF Preview -->
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             // Fetch requisitions from the database
-                            $result = $conn->query("SELECT r.id, g.group_name, r.total_amount, r.status, r.requisition_pdf 
+                            $result = $conn->query("SELECT r.id, g.group_name, r.total_amount, r.status, r.updated_at 
                             FROM requisitions r 
                             JOIN groups g ON r.group_id = g.id");
 
@@ -67,10 +68,11 @@ include('db.php');
                                         <td>{$row['total_amount']}</td>
                                         <td>{$row['status']}</td>
                                         <td>{$row['updated_at']}</td>
+                                        <td><a href='preview_requisition.php?id={$row['id']}' target='_blank' class='btn btn-info'>Preview PDF</a></td>
                                     </tr>";
                                 }
                             } else {
-                                echo "<tr><td colspan='5'>No requisitions found</td></tr>";
+                                echo "<tr><td colspan='6'>No requisitions found</td></tr>";
                             }
                             ?>
                         </tbody>

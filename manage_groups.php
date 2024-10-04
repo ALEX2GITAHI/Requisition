@@ -3,7 +3,6 @@ include('header.php');
 include('db.php');
 include('edit_group.php');
 include('add_group.php');
-
 ?>
 
 <div class="container-fluid p-0"> <!-- Full-width container with no padding -->
@@ -108,6 +107,7 @@ include('add_group.php');
                     <div class="mb-3">
                         <label for="group_logo" class="form-label">Group Logo</label>
                         <input type="file" class="form-control" id="group_logo" name="group_logo" accept="image/*" required>
+                        <img id="logoPreview" src="" alt="Logo Preview" style="display:none;" width="100" class="mt-2">
                     </div>
                     <button type="submit" class="btn btn-primary">Add Group</button>
                 </form>
@@ -135,11 +135,7 @@ include('add_group.php');
                         <label for="edit_total_account_balance" class="form-label">Account Balance</label>
                         <input type="number" class="form-control" id="edit_total_account_balance" name="total_account_balance" step="0.01" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="edit_group_logo" class="form-label">Group Logo</label>
-                        <input type="file" class="form-control" id="edit_group_logo" name="group_logo" accept="image/*">
-                        <img id="editLogoPreview" src="" alt="Group Logo Preview" width="100" style="display: none; margin-top: 10px;">
-                    </div>
+                    <!-- Group Logo section removed -->
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
             </div>
@@ -153,7 +149,6 @@ function loadGroupData(id) {
     fetch('get_group.php?id=' + id)
         .then(response => response.json())
         .then(data => {
-            // Check if there is an error in the response
             if (data.error) {
                 alert(data.error); // Show an error if group is not found or another issue arises
             } else {
@@ -161,15 +156,6 @@ function loadGroupData(id) {
                 document.getElementById('group_id').value = data.id;
                 document.getElementById('edit_group_name').value = data.group_name;
                 document.getElementById('edit_total_account_balance').value = data.total_account_balance;
-                
-                // Handle logo if it exists
-                if (data.group_logo) {
-                    const logoPreview = document.getElementById('editLogoPreview');
-                    logoPreview.src = 'data:image/jpeg;base64,' + btoa(data.group_logo); // Convert to base64
-                    logoPreview.style.display = 'block'; // Show the preview
-                } else {
-                    document.getElementById('editLogoPreview').style.display = 'none'; // Hide if no logo
-                }
             }
         })
         .catch(error => {
@@ -177,19 +163,6 @@ function loadGroupData(id) {
             alert('Error fetching group data');
         });
 }
-
-// Preview uploaded image for logo
-document.getElementById('group_logo').addEventListener('change', function (e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        document.getElementById('editLogoPreview').src = e.target.result;
-        document.getElementById('editLogoPreview').style.display = 'block';
-    }
-    reader.readAsDataURL(file);
-});
 </script>
 
-<?php
-include('footer.php');
-?>
+<?php include('footer.php'); ?>
