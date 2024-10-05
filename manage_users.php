@@ -19,33 +19,55 @@ $groups = $conn->query($group_sql);
 
 // Handle form submission for adding a new user
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = $_POST['username'];
-    $password = $_POST['password'];  // Normal password, no hashing
-    $role = $_POST['role'];
-    $group_id = $_POST['group_id'] ?? NULL; // Allow null for no group
-    $first_name = $_POST['first_name'];
-    $last_name = $_POST['last_name'];
-    $phone_number = $_POST['phone_number'];
+    if (isset($_POST['user_id'])) { // Update user
+        $user_id = $_POST['user_id'];
+        $username = $_POST['username'];
+        $password = $_POST['password']; // Password, make sure to hash it if needed
+        $role = $_POST['role'];
+        $group_id = $_POST['group_id'] ?? NULL; // Allow null for no group
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+        $phone_number = $_POST['phone_number'];
 
-    // Insert new user into the database
-    $sql = "INSERT INTO users (username, password, role, group_id, first_name, last_name, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('sssssss', $username, $password, $role, $group_id, $first_name, $last_name, $phone_number);
+        // Update existing user in the database
+        $sql = "UPDATE users SET username=?, password=?, role=?, group_id=?, first_name=?, last_name=?, phone_number=? WHERE id=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('sssssssi', $username, $password, $role, $group_id, $first_name, $last_name, $phone_number, $user_id);
 
-    if ($stmt->execute()) {
-        header("Location: manage_users.php?success=User added successfully");
-        exit;
-    } else {
-        echo "Error: " . $conn->error;
+        if ($stmt->execute()) {
+            header("Location: manage_users.php?success=User updated successfully");
+            exit;
+        } else {
+            echo "Error: " . $conn->error;
+        }
+    } else { // Add new user
+        $username = $_POST['username'];
+        $password = $_POST['password'];  // Normal password, no hashing
+        $role = $_POST['role'];
+        $group_id = $_POST['group_id'] ?? NULL; // Allow null for no group
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+        $phone_number = $_POST['phone_number'];
+
+        // Insert new user into the database
+        $sql = "INSERT INTO users (username, password, role, group_id, first_name, last_name, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('sssssss', $username, $password, $role, $group_id, $first_name, $last_name, $phone_number);
+
+        if ($stmt->execute()) {
+            header("Location: manage_users.php?success=User added successfully");
+            exit;
+        } else {
+            echo "Error: " . $conn->error;
+        }
     }
 }
 ?>
 
-<div class="container-fluid p-0"> <!-- Full-width container with no padding -->
+<div class="container-fluid p-0">
     <div class="row">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center bg-light p-3 border-bottom">
-                <!-- Manage Users title with a link -->
                 <h4 class="m-0">
                     <a href="manage_users.php" class="text-decoration-none text-dark">Manage Users</a>
                 </h4>
@@ -53,36 +75,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <!-- Navbar links -->
                 <nav>
                     <ul class="nav">
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_dashboard.php">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="manage_groups.php">Manage Groups</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="view_requisitions.php">View Requisitions</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile.php">Profile</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-danger" href="logout.php">Logout</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="manage_groups.php">Manage Groups</a></li>
+                        <li class="nav-item"><a class="nav-link" href="view_requisitions.php">View Requisitions</a></li>
+                        <li class="nav-item"><a class="nav-link" href="profile.php">Profile</a></li>
+                        <li class="nav-item"><a class="nav-link text-danger" href="logout.php">Logout</a></li>
                     </ul>
                 </nav>
             </div>
         </div>
     </div>
 
-    <!-- Main content -->
     <div class="row mt-3">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">Manage Users</div>
                 <div class="card-body">
-                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                        Add New User
-                    </button>
+                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">Add New User</button>
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
@@ -206,8 +215,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="POST" id="editUserForm">
-                    <input type="hidden" name="user_id" id="user_id" value="">
+                <form method="POST">
+                    <input type="hidden" id="user_id" name="user_id">
                     <div class="mb-3">
                         <label for="edit_username" class="form-label">Username</label>
                         <input type="text" class="form-control" id="edit_username" name="username" required>
@@ -259,28 +268,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <script>
-// Function to load user data into the edit modal
-function loadUserData(id) {
-    fetch('get_user.php?id=' + id)
+// JavaScript to dynamically load user data into the Edit User Modal
+function loadUserData(userId) {
+    fetch('get_user.php?id=' + userId)
         .then(response => response.json())
         .then(data => {
+            // Populate the modal with the user data
             document.getElementById('user_id').value = data.id;
             document.getElementById('edit_username').value = data.username;
-            document.getElementById('edit_password').value = data.password;
+            document.getElementById('edit_password').value = data.password; // Optional: Consider hashing
             document.getElementById('edit_first_name').value = data.first_name;
             document.getElementById('edit_last_name').value = data.last_name;
             document.getElementById('edit_phone_number').value = data.phone_number;
             document.getElementById('edit_role').value = data.role;
             document.getElementById('edit_group_id').value = data.group_id;
-        });
+        })
+        .catch(error => console.error('Error fetching user data:', error));
 }
 
 // Function to toggle password visibility
 function togglePassword(button) {
-    const passwordInput = button.previousElementSibling;
-    const isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    button.textContent = isPassword ? 'Hide' : 'View';
+    const input = button.previousElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = 'Hide';
+    } else {
+        input.type = 'password';
+        button.textContent = 'View';
+    }
 }
 </script>
 

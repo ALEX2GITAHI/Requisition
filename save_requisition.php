@@ -91,14 +91,14 @@ if (isset($_POST['submit_requisition'])) {
     // Add title and church information
     $pdf->SetTextColor(0, 0, 128);
     $pdf->Cell(80);
-    $pdf->Cell(30, 10, 'PCEA MUKINYI CHURCH', 0, 1, 'C');
-    $pdf->SetFont('Arial', '', 12);
+    $pdf->Cell(30, 10, 'PRESBYTERIAN CHURCH OF EAST AFRICA', 0, 1, 'C');
+    $pdf->Cell(80);
+    $pdf->Cell(30, 10, 'MUKINYI CHURCH', 0, 1, 'C');
+    $pdf->SetFont('Times', '', 12);
     $pdf->Cell(80);
     $pdf->Cell(30, 10, 'P.O BOX 60081-00200, City Square, Nairobi, Kenya', 0, 1, 'C');
     $pdf->Cell(80);
     $pdf->Cell(30, 10, 'Tel: 0720 510 840, 0756 364 466, Email: pceamukinyi@gmail.com', 0, 1, 'C');
-    $pdf->Cell(80);
-    $pdf->Cell(30, 10, 'My House will be called a House of Prayer for All Nations.,', 0, 1, 'C');
 
     // Line break
     $pdf->Ln(10);

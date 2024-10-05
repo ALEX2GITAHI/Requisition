@@ -1,8 +1,6 @@
 <?php
 include('header.php');
 include('db.php');
-include('edit_group.php');
-include('add_group.php');
 ?>
 
 <div class="container-fluid p-0"> <!-- Full-width container with no padding -->
@@ -135,7 +133,6 @@ include('add_group.php');
                         <label for="edit_total_account_balance" class="form-label">Account Balance</label>
                         <input type="number" class="form-control" id="edit_total_account_balance" name="total_account_balance" step="0.01" required>
                     </div>
-                    <!-- Group Logo section removed -->
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
             </div>
