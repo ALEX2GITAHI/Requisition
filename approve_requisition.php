@@ -5,7 +5,7 @@ require('fpdf.php'); // Ensure FPDF is included
 
 // Check if the user is logged in and is allowed to approve (e.g., Treasurer, Secretary, etc.)
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['treasurer', 'secretary', 'chairperson', 'patron', 'lcc_treasurer', 'lcc_secretary', 'lcc_chair'])) {
-    header('Location: login.php');
+    header('Location: index.php');
     exit();
 }
 

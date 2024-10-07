@@ -5,7 +5,7 @@ require 'db.php';
 
 // Ensure the user is logged in and has admin privileges
 if ($_SESSION['role'] != 'admin') {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
@@ -17,22 +17,26 @@ $users = $conn->query($user_sql);
 $group_sql = "SELECT id, group_name FROM groups";
 $groups = $conn->query($group_sql);
 
-// Handle form submission for adding a new user
+// Handle form submission for adding/updating a user
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['user_id'])) { // Update user
-        $user_id = $_POST['user_id'];
-        $username = $_POST['username'];
-        $password = $_POST['password']; // Password, make sure to hash it if needed
-        $role = $_POST['role'];
-        $group_id = $_POST['group_id'] ?? NULL; // Allow null for no group
-        $first_name = $_POST['first_name'];
-        $last_name = $_POST['last_name'];
-        $phone_number = $_POST['phone_number'];
+    $username = $_POST['username'];
+    $role = $_POST['role'];
+    $group_id = $_POST['group_id'] ?? NULL;
+    $first_name = $_POST['first_name'];
+    $last_name = $_POST['last_name'];
+    $phone_number = $_POST['phone_number'];
+    $password = $_POST['password']; // Get the plain text password
 
-        // Update existing user in the database
+    // Hash the password before storing in the database if it's not empty
+    $hashed_password = !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : null;
+
+    if (isset($_POST['user_id']) && !empty($_POST['user_id'])) { // Update user
+        $user_id = $_POST['user_id'];
+
+        // Update with or without password change
         $sql = "UPDATE users SET username=?, password=?, role=?, group_id=?, first_name=?, last_name=?, phone_number=? WHERE id=?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('sssssssi', $username, $password, $role, $group_id, $first_name, $last_name, $phone_number, $user_id);
+        $stmt->bind_param('sssssssi', $username, $hashed_password, $role, $group_id, $first_name, $last_name, $phone_number, $user_id);
 
         if ($stmt->execute()) {
             header("Location: manage_users.php?success=User updated successfully");
@@ -41,18 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             echo "Error: " . $conn->error;
         }
     } else { // Add new user
-        $username = $_POST['username'];
-        $password = $_POST['password'];  // Normal password, no hashing
-        $role = $_POST['role'];
-        $group_id = $_POST['group_id'] ?? NULL; // Allow null for no group
-        $first_name = $_POST['first_name'];
-        $last_name = $_POST['last_name'];
-        $phone_number = $_POST['phone_number'];
-
-        // Insert new user into the database
         $sql = "INSERT INTO users (username, password, role, group_id, first_name, last_name, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param('sssssss', $username, $password, $role, $group_id, $first_name, $last_name, $phone_number);
+        $stmt->bind_param('sssssss', $username, $hashed_password, $role, $group_id, $first_name, $last_name, $phone_number);
 
         if ($stmt->execute()) {
             header("Location: manage_users.php?success=User added successfully");
@@ -86,19 +81,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
     </div>
 
+    <!-- Main content -->
     <div class="row mt-3">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">Manage Users</div>
                 <div class="card-body">
-                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">Add New User</button>
+                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        Add New User
+                    </button>
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Username</th>
-                                <th>Role</th>
-                                <th>Password</th>
+                                <th>Role</th>                            
                                 <th>First Name</th>
                                 <th>Last Name</th>
                                 <th>Phone Number</th>
@@ -108,20 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <tbody>
                             <?php
                             // Fetch users from the database
-                            $result = $conn->query("SELECT id, username, role, password, first_name, last_name, phone_number FROM users");
+                            $result = $conn->query("SELECT id, username, role, password, first_name, last_name, phone_number, group_id FROM users");
 
                             if ($result->num_rows > 0) {
                                 while ($row = $result->fetch_assoc()) {
                                     echo "<tr>
             <td>{$row['id']}</td>
             <td>{$row['username']}</td>
-            <td>{$row['role']}</td>
-            <td>
-                <div class='input-group'>
-                    <input type='password' class='form-control' value='{$row['password']}' readonly>
-                    <button class='btn btn-sm btn-secondary' onclick='togglePassword(this)'>View</button>
-                </div>
-            </td>
+            <td>{$row['role']}</td>            
             <td>{$row['first_name']}</td>
             <td>{$row['last_name']}</td>
             <td>{$row['phone_number']}</td>
@@ -137,7 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 echo "<tr><td colspan='8'>No users found</td></tr>";
                             }
                             ?>
-
                         </tbody>
                     </table>
                 </div>
@@ -162,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input type="password" class="form-control" id="password" name="password" required>                    
                     </div>
                     <div class="mb-3">
                         <label for="first_name" class="form-label">First Name</label>
@@ -183,22 +173,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <option value="secretary">Secretary</option>
                             <option value="chairperson">Chairperson</option>
                             <option value="patron">Patron</option>
-                            <option value="lcc_treasurer">LCC Treasurer</option>
-                            <option value="lcc_secretary">LCC Secretary</option>
-                            <option value="lcc_chair">LCC Chair</option>
                             <option value="admin">Admin</option>
-                            <option value="user">User</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="group_id" class="form-label">Group</label>
                         <select class="form-select" id="group_id" name="group_id">
-                            <option value="">None</option>
-                            <?php while ($group = $groups->fetch_assoc()) { ?>
-                                <option value="<?= $group['id'] ?>"><?= $group['group_name'] ?></option>
-                            <?php } ?>
+                            <?php while ($group = $groups->fetch_assoc()): ?>
+                                <option value="<?php echo $group['id']; ?>"><?php echo $group['group_name']; ?></option>
+                            <?php endwhile; ?>
                         </select>
                     </div>
+                    <input type="hidden" name="user_id" id="user_id">
                     <button type="submit" class="btn btn-primary">Add User</button>
                 </form>
             </div>
@@ -216,14 +202,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <div class="modal-body">
                 <form method="POST">
-                    <input type="hidden" id="user_id" name="user_id">
                     <div class="mb-3">
                         <label for="edit_username" class="form-label">Username</label>
                         <input type="text" class="form-control" id="edit_username" name="username" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="edit_password" name="password" required>
+                        <label for="edit_password" class="form-label">Password (Leave blank if not changing)</label>
+                        <input type="password" class="form-control" id="edit_password" name="password">
                     </div>
                     <div class="mb-3">
                         <label for="edit_first_name" class="form-label">First Name</label>
@@ -244,22 +229,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <option value="secretary">Secretary</option>
                             <option value="chairperson">Chairperson</option>
                             <option value="patron">Patron</option>
-                            <option value="lcc_treasurer">LCC Treasurer</option>
-                            <option value="lcc_secretary">LCC Secretary</option>
-                            <option value="lcc_chair">LCC Chair</option>
                             <option value="admin">Admin</option>
-                            <option value="user">User</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="edit_group_id" class="form-label">Group</label>
                         <select class="form-select" id="edit_group_id" name="group_id">
                             <option value="">None</option>
-                            <?php while ($group = $groups->fetch_assoc()) { ?>
+                            <?php
+                            // Reset the pointer for fetching groups again
+                            $groups->data_seek(0);
+                            while ($group = $groups->fetch_assoc()) { ?>
                                 <option value="<?= $group['id'] ?>"><?= $group['group_name'] ?></option>
                             <?php } ?>
                         </select>
                     </div>
+                    <input type="hidden" name="user_id" id="edit_user_id">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
             </div>
@@ -268,34 +253,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <script>
-// JavaScript to dynamically load user data into the Edit User Modal
 function loadUserData(userId) {
+    // Fetch user data using AJAX
     fetch('get_user.php?id=' + userId)
         .then(response => response.json())
         .then(data => {
-            // Populate the modal with the user data
-            document.getElementById('user_id').value = data.id;
+            document.getElementById('edit_user_id').value = data.id;
             document.getElementById('edit_username').value = data.username;
-            document.getElementById('edit_password').value = data.password; // Optional: Consider hashing
             document.getElementById('edit_first_name').value = data.first_name;
             document.getElementById('edit_last_name').value = data.last_name;
             document.getElementById('edit_phone_number').value = data.phone_number;
             document.getElementById('edit_role').value = data.role;
-            document.getElementById('edit_group_id').value = data.group_id;
+            document.getElementById('edit_group_id').value = data.group_id; // Set group
         })
         .catch(error => console.error('Error fetching user data:', error));
 }
 
-// Function to toggle password visibility
 function togglePassword(button) {
     const input = button.previousElementSibling;
-    if (input.type === 'password') {
-        input.type = 'text';
-        button.textContent = 'Hide';
-    } else {
-        input.type = 'password';
-        button.textContent = 'View';
-    }
+    input.type = input.type === 'password' ? 'text' : 'password';
+    button.textContent = button.textContent === 'View' ? 'Hide' : 'View';
 }
 </script>
 

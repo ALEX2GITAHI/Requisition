@@ -2,12 +2,11 @@
 require 'db.php';
 
 if (isset($_GET['id'])) {
-    $id = intval($_GET['id']);
+    $user_id = $_GET['id'];
 
-    // Fetch the user details by ID
-    $sql = "SELECT * FROM users WHERE id = ?";
+    $sql = "SELECT id, username, role, first_name, last_name, phone_number, group_id FROM users WHERE id=?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $id);
+    $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
 
@@ -15,9 +14,7 @@ if (isset($_GET['id'])) {
         $user = $result->fetch_assoc();
         echo json_encode($user);
     } else {
-        echo json_encode(['error' => 'User not found']);
+        echo json_encode([]);
     }
-} else {
-    echo json_encode(['error' => 'Invalid request']);
 }
 ?>

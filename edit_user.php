@@ -4,7 +4,7 @@ require 'db.php';
 
 // Ensure the user is logged in and has admin privileges
 if ($_SESSION['role'] != 'admin') {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
