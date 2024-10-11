@@ -12,26 +12,24 @@ if (!isset($_SESSION['user_id'])) {
 
 // Get current user's role
 $current_user_id = $_SESSION['user_id'];
-$role_query = "SELECT role, group_id FROM users WHERE id = ?";
+$role_query = "SELECT role FROM users WHERE id = ?";
 $role_stmt = $conn->prepare($role_query);
 $role_stmt->bind_param("i", $current_user_id);
 $role_stmt->execute();
 $role_result = $role_stmt->get_result();
-$user_data = $role_result->fetch_assoc();
-$current_user_role = $user_data['role'];
-$group_id = $user_data['group_id'];
+$current_user_role = $role_result->fetch_assoc()['role'];
 
-// Fetch requisition data for the user's group
-$query = "SELECT r.id, g.group_name, r.total_amount, r.status 
+// Fetch requisition data with disapprover role
+$query = "SELECT r.id, g.group_name, r.total_amount, r.status, r.disapproval_comment, u.role AS disapprover_role 
           FROM requisitions r 
-          JOIN groups g ON r.group_id = g.id
-          WHERE r.group_id = ?";
+          JOIN groups g ON r.group_id = g.id 
+          LEFT JOIN users u ON u.id = r.updated_by"; // Fetch disapprover's role
 $stmt = $conn->prepare($query);
-$stmt->bind_param("i", $group_id);
 $stmt->execute();
 $requisitions = $stmt->get_result();
 ?>
 <!-- Table for displaying requisition statuses -->
+<link href="assets/img/log2.png" rel="shortcut icon">
 <div class="card mt-2">
     <div class="card-header">
         <h4>Requisition Statuses</h4>
@@ -55,14 +53,18 @@ $requisitions = $stmt->get_result();
                     <td><?= number_format($row['total_amount'], 2) ?></td>
                     <td><?= ucfirst($row['status']) ?></td>
                     <td>
-                        <!-- View PDF button -->
-                        <form action="view_pdf.php" method="GET" style="display:inline;">
-                            <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                            <button type="submit" class="btn btn-primary btn-sm">View PDF</button>
-                        </form>
 
-                        <!-- Approve and Disapprove buttons for the current user role -->
-                        <?php if ($current_user_role == 'secretary' && $row['status'] == 'Treasurer Approved') { ?>
+                    <div style="display: flex; align-items: center;">
+                                <!-- Disapproval comment with the role of the disapprover -->
+                                <?php if ($row['status'] == 'Disapproved' && !empty($row['disapproval_comment'])): ?>
+                                    <div class="alert alert-warning" role="alert" style="margin-right: 10px;">
+                                        <strong>Disapproval Comment (<?= htmlspecialchars($row['disapprover_role']) ?>):</strong>
+                                        <?= htmlspecialchars($row['disapproval_comment']); ?>
+                                    </div>
+                                <?php endif; ?>
+
+                            <!-- Approve and Disapprove buttons for the current user role -->
+                            <?php if ($current_user_role == 'secretary' && $row['status'] == 'Treasurer Approved') { ?>
                             <form action="approve_requisition.php" method="POST" style="display:inline;">
                                 <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
                                 <button type="submit" class="btn btn-success btn-sm">Approve</button>
@@ -74,6 +76,7 @@ $requisitions = $stmt->get_result();
                             </form>
                         <?php } ?>
 
+                        <!-- Show Approve and Disapprove buttons for chairperson when secretary has approved -->
                         <?php if ($current_user_role == 'chairperson' && $row['status'] == 'Secretary Approved') { ?>
                             <form action="approve_requisition.php" method="POST" style="display:inline;">
                                 <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
@@ -86,11 +89,10 @@ $requisitions = $stmt->get_result();
                             </form>
                         <?php } ?>
 
-                        <!-- Similarly, add approval options for other roles like patron and LCC roles -->
-                        <!-- Delete Requisition button -->
-                        <form action="delete_requisition.php" method="POST" style="display:inline;">
+                                               <!-- View PDF button -->
+                                               <form action="view_pdf.php" method="GET" style="display:inline;">
                             <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this requisition?')">Delete</button>
+                            <button type="submit" class="btn btn-primary btn-sm">View PDF</button>
                         </form>
                     </td>
                 </tr>

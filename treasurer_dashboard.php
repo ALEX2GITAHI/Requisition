@@ -62,6 +62,18 @@ if (isset($_POST['delete_item'])) {
     $_SESSION['requisition_items'] = array_values($_SESSION['requisition_items']); // Reindex the array
 }
 
+// Handle saving requisition and refreshing the page
+if (isset($_POST['submit_requisition'])) {
+    // Insert logic to save the requisition into the database (e.g., saving PDF, requisition details)
+
+    // Clear the session items after saving
+    unset($_SESSION['requisition_items']);
+
+    // Refresh the page to clear the form
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
+}
+
 // Save requisition, generate PDF, and other logic goes here...
 ?>
     <!-- Navigation Bar -->
@@ -80,7 +92,6 @@ if (isset($_POST['delete_item'])) {
             </div>
         </div>
     </nav>
-
     <!-- Table for displaying requisition items -->
     <div class="card mt-2">
         <div class="card-header">

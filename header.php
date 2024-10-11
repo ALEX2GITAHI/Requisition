@@ -10,6 +10,7 @@ $role = $_SESSION['role'] ?? 'User';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link href="assets/img/log2.png" rel="shortcut icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css"> <!-- Linking Custom CSS -->
     <style>
@@ -74,8 +75,8 @@ $role = $_SESSION['role'] ?? 'User';
 
                 <!-- User Info: Date, Time, and Username -->
                 <div class="header-middle">
-                    <span>Welcome, <?= htmlspecialchars($username) ?> (Role: <?= htmlspecialchars($role) ?>, Group: <?= htmlspecialchars($group_name) ?>)</span>
-                    <span><strong>Date & Time:</strong> <span id="datetime"></span></span>
+                    <span>Welcome, <?= htmlspecialchars($username) ?>, <?= htmlspecialchars($group_name) ?>, <?= htmlspecialchars($role) ?></span>
+                    <span><strong> </strong> <span id="datetime"></span></span>
                 </div>
 
                 <!-- Logout Link -->
@@ -93,6 +94,34 @@ $role = $_SESSION['role'] ?? 'User';
             document.getElementById('datetime').textContent = now;
         }
         setInterval(updateTime, 1000); // Update the time every second
+
+        // Idle timeout logic
+        let idleTime = 0;
+
+        // Increment the idle time counter every minute.
+        function timerIncrement() {
+            idleTime += 1;
+            if (idleTime >= 5) { // 5 minutes of inactivity
+                window.location.href = 'logout.php'; // Redirect to logout page
+            }
+        }
+
+        // Reset idle timer on user activity
+        function resetIdleTime() {
+            idleTime = 0;
+        }
+
+        // Track various user activities
+        window.onload = function() {
+            // Increment the idle time every minute
+            setInterval(timerIncrement, 60000); // 1 minute = 60000 ms
+
+            // Reset the idle timer on any of these events
+            document.onmousemove = resetIdleTime;
+            document.onkeypress = resetIdleTime;
+            document.onscroll = resetIdleTime;
+            document.onclick = resetIdleTime;
+        };
     </script>
 
     <!-- Optional: Bootstrap JavaScript for responsive features -->

@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 case 'patron': header('Location: patron_dashboard.php'); exit;
                 case 'treasurer': header('Location: treasurer_dashboard.php'); exit;
                 case 'secretary': header('Location: secretary_dashboard.php'); exit;
-                case 'chair': header('Location: chair_dashboard.php'); exit;
+                case 'chairperson': header('Location: chair_dashboard.php'); exit;
                 case 'admin': header('Location: admin_dashboard.php'); exit;
                 default: header('Location: index.php?error=Invalid role'); exit;
             }
@@ -71,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Custom CSS -->
+    <link href="assets/img/log2.png" rel="shortcut icon">
     <style>
         body {
             background-image: url('assets/img/Screenshot 2024-04-17 121029.png');

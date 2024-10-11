@@ -20,7 +20,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 ?>
-
+<link href="assets/img/log2.png" rel="shortcut icon">
 <div class="container">
     <h1 class="mb-4">LCC Secretary Dashboard</h1>
     <table class="table table-striped">

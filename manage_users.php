@@ -1,5 +1,4 @@
 <?php
-session_start();
 include('header.php');
 require 'db.php';
 
@@ -39,8 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bind_param('sssssssi', $username, $hashed_password, $role, $group_id, $first_name, $last_name, $phone_number, $user_id);
 
         if ($stmt->execute()) {
-            header("Location: manage_users.php?success=User updated successfully");
-            exit;
+    
         } else {
             echo "Error: " . $conn->error;
         }

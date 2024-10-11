@@ -21,7 +21,7 @@ include('db.php');
     }
 </style>
 
-
+<link href="assets/img/log2.png" rel="shortcut icon">
 <div class="container-fluid p-0"> <!-- Full-width container with no padding -->
     <div class="row">
         <div class="col-md-12">
