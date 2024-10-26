@@ -40,15 +40,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             // Redirect based on user role
             switch ($user['role']) {
-                case 'lcc_treasurer': header('Location: lcc_treasurer_dashboard.php'); exit;
-                case 'lcc_secretary': header('Location: lcc_secretary_dashboard.php'); exit;
-                case 'lcc_chair': header('Location: lcc_chair_dashboard.php'); exit;
-                case 'patron': header('Location: patron_dashboard.php'); exit;
-                case 'treasurer': header('Location: treasurer_dashboard.php'); exit;
-                case 'secretary': header('Location: secretary_dashboard.php'); exit;
-                case 'chairperson': header('Location: chair_dashboard.php'); exit;
-                case 'admin': header('Location: admin_dashboard.php'); exit;
-                default: header('Location: index.php?error=Invalid role'); exit;
+                case 'lcc_treasurer':
+                    header('Location: lcc_treasurer_dashboard.php');
+                    exit;
+                case 'lcc_secretary':
+                    header('Location: lcc_secretary_dashboard.php');
+                    exit;
+                case 'lcc_chair':
+                    header('Location: lcc_chair_dashboard.php');
+                    exit;
+                case 'patron':
+                    header('Location: patron_dashboard.php');
+                    exit;
+                case 'treasurer':
+                    header('Location: treasurer_dashboard.php');
+                    exit;
+                case 'secretary':
+                    header('Location: secretary_dashboard.php');
+                    exit;
+                case 'chairperson':
+                    header('Location: chair_dashboard.php');
+                    exit;
+                case 'admin':
+                    header('Location: admin_dashboard.php');
+                    exit;
+                default:
+                    error_log("Unknown user role: " . $user['role']);
+                    header('Location: index.php?error=Unknown user role: ' . urlencode($user['role']));
+                    exit;
             }
         } else {
             // Invalid username or password
@@ -56,11 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
     } else {
+        // SQL error handling
         die("Error preparing statement: " . $conn->error);
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -68,9 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
     <link href="assets/img/log2.png" rel="shortcut icon">
     <style>
         body {
@@ -85,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-family: 'Arial', sans-serif;
             color: #fff;
         }
+
         .login-container {
             background: rgba(255, 255, 255, 0.9);
             border-radius: 15px;
@@ -94,16 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             max-width: 450px;
             text-align: center;
         }
+
         .logo img {
             max-width: 100px;
-            margin-bottom: 0 rem;
+            margin-bottom: 0rem;
         }
+
         .form-control {
             border-radius: 50px;
             padding: 1rem;
             background: rgba(255, 255, 255, 0.8);
             border: 1px solid #ddd;
         }
+
         .btn-primary {
             border-radius: 50px;
             padding: 0.75rem;
@@ -113,50 +134,95 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             font-weight: bold;
             transition: all 0.3s ease;
         }
+
         .btn-primary:hover {
             background-color: #0056b3;
         }
+
         .alert {
             border-radius: 50px;
             padding: 0.75rem;
         }
+
         .card-header h2 {
-            color: #90e0ef;
+            color: lightskyblue !important;
             font-size: 1.75rem;
         }
-        @media (max-width: 768px) {
-            .login-container {
-                padding: 1.5rem;
-            }
+
+        /* Loading spinner styles */
+        .loading-spinner {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #007bff;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
+
 <body>
 
-<div class="login-container">
-    <div class="logo">
-        <img src="assets/img/log2.png" alt="Logo">
-    </div>
-    <h2 class="card-header">PCEA MUKINYI</h2>
-    <form method="POST" action="index.php">
-        <?php if (isset($_GET['error'])) { ?>
-            <div class="alert alert-danger text-center">
-                <?= htmlspecialchars($_GET['error']) ?>
+    <!-- Login Form -->
+    <div class="login-container" id="login-form">
+        <div class="logo">
+            <img src="assets/img/log2.png" alt="Logo">
+        </div>
+        <div class="card-header">
+            <h2>PCEA MUKINYI</h2>
+        </div>
+        <form id="loginForm" method="POST" action="index.php">
+            <?php if (isset($_GET['error'])) { ?>
+                <div class="alert alert-danger text-center">
+                    <?= htmlspecialchars($_GET['error']) ?>
+                </div>
+            <?php } ?>
+            <div class="mb-3">
+                <input type="text" class="form-control" name="username" placeholder="Username" required>
             </div>
-        <?php } ?>
-        <div class="mb-3">
-            <input type="text" class="form-control" name="username" placeholder="Username" required>
-        </div>
-        <div class="mb-3">
-            <input type="password" class="form-control" name="password" placeholder="Password" required>
-        </div>
-        <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-    </form>
-</div>
+            <div class="mb-3">
+                <input type="password" class="form-control" name="password" placeholder="Password" required>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+    </div>
 
-<!-- Bootstrap JS and dependencies -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Hide login form and show loading spinner
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'flex';
+
+            // Wait for 2 seconds before submitting the form
+            setTimeout(function() {
+                event.target.submit();
+            }, 1800);
+        });
+    </script>
 </body>
 </html>

@@ -179,3 +179,4 @@ include('db.php');
         data: groupsData
     });
 </script>
+<?php include('footer.php'); ?>

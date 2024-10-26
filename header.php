@@ -1,4 +1,12 @@
 <?php
+// Start the session to access session variables
+session_start();
+// Ensure the user is logged in, else redirect to the login page
+if (!isset($_SESSION['username']) || !isset($_SESSION['role'])) {
+    header('Location: index.php'); // Redirect to login if session is not set
+    exit(); // Stop further script execution
+}
+
 // Assuming $_SESSION['username'], $_SESSION['group_name'], and $_SESSION['role'] are set upon login
 $username = $_SESSION['username'] ?? 'Guest';
 $group_name = $_SESSION['group_name'] ?? 'Default Group';
@@ -73,10 +81,10 @@ $role = $_SESSION['role'] ?? 'User';
                     <span><strong>PCEA MUKINYI</strong></span>
                 </div>
 
-                <!-- User Info: Date, Time, and Username -->
+                <!-- User Info: Date, Day, Time, and Username -->
                 <div class="header-middle">
-                    <span>Welcome, <?= htmlspecialchars($username) ?>, <?= htmlspecialchars($group_name) ?>, <?= htmlspecialchars($role) ?></span>
-                    <span><strong> </strong> <span id="datetime"></span></span>
+                    <span>Welcome, <?= htmlspecialchars($username) ?> (Role: <?= htmlspecialchars($role) ?>, Group: <?= htmlspecialchars($group_name) ?>)</span>
+                    <span><strong></strong> <span id="datetime"></span></span>
                 </div>
 
                 <!-- Logout Link -->
@@ -88,17 +96,34 @@ $role = $_SESSION['role'] ?? 'User';
     </header>
 
     <script>
-        // Function to display Nairobi time
+        // Function to display Nairobi time with the day of the week, date, hour, and minute
         function updateTime() {
-            const now = new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' });
-            document.getElementById('datetime').textContent = now;
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi' }));
+
+            const dayName = daysOfWeek[now.getDay()]; // Get day of the week
+
+            // Get the current date in YYYY-MM-DD format
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+            const date = String(now.getDate()).padStart(2, '0'); // Day of the month
+
+            // Format the time as HH:MM
+            const hours = now.getHours().toString().padStart(2, '0'); // Get hours, padded to 2 digits
+            const minutes = now.getMinutes().toString().padStart(2, '0'); // Get minutes, padded to 2 digits
+
+            // Format as "YYYY-MM-DD, Day, HH:MM"
+            const formattedDateTime = `${year}-${month}-${date}, ${dayName}, ${hours}:${minutes}`;
+
+            document.getElementById('datetime').textContent = formattedDateTime; // Display time in HTML
         }
+
         setInterval(updateTime, 1000); // Update the time every second
 
         // Idle timeout logic
         let idleTime = 0;
 
-        // Increment the idle time counter every minute.
+        // Increment the idle time counter every minute
         function timerIncrement() {
             idleTime += 1;
             if (idleTime >= 5) { // 5 minutes of inactivity

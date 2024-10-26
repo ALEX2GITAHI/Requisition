@@ -1,5 +1,4 @@
 <?php
-session_start();
 include('header.php');
 include('navbar.php');
 include('db.php');
@@ -10,21 +9,27 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Get current user's role
+// Get current user's information (role and group)
 $current_user_id = $_SESSION['user_id'];
-$role_query = "SELECT role FROM users WHERE id = ?";
-$role_stmt = $conn->prepare($role_query);
-$role_stmt->bind_param("i", $current_user_id);
-$role_stmt->execute();
-$role_result = $role_stmt->get_result();
-$current_user_role = $role_result->fetch_assoc()['role'];
 
-// Fetch requisition data with disapprover role
+// Retrieve the user's group ID and role
+$user_query = "SELECT group_id, role FROM users WHERE id = ?";
+$user_stmt = $conn->prepare($user_query);
+$user_stmt->bind_param("i", $current_user_id);
+$user_stmt->execute();
+$user_result = $user_stmt->get_result();
+$user_info = $user_result->fetch_assoc();
+$current_user_group_id = $user_info['group_id'];
+$current_user_role = $user_info['role'];
+
+// Fetch requisition data for the user's group
 $query = "SELECT r.id, g.group_name, r.total_amount, r.status, r.disapproval_comment, u.role AS disapprover_role 
           FROM requisitions r 
           JOIN groups g ON r.group_id = g.id 
-          LEFT JOIN users u ON u.id = r.updated_by"; // Fetch disapprover's role
+          LEFT JOIN users u ON u.id = r.updated_by
+          WHERE r.group_id = ?";  // Filter by the user's group
 $stmt = $conn->prepare($query);
+$stmt->bind_param("i", $current_user_group_id);
 $stmt->execute();
 $requisitions = $stmt->get_result();
 ?>
@@ -63,7 +68,7 @@ $requisitions = $stmt->get_result();
                                     </div>
                                 <?php endif; ?>
 
-                            <!-- Approve and Disapprove buttons for the current user role -->
+                            <!-- Approve and Disapprove buttons for secretary -->
                             <?php if ($current_user_role == 'secretary' && $row['status'] == 'Treasurer Approved') { ?>
                             <form action="approve_requisition.php" method="POST" style="display:inline;">
                                 <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
@@ -76,7 +81,7 @@ $requisitions = $stmt->get_result();
                             </form>
                         <?php } ?>
 
-                        <!-- Show Approve and Disapprove buttons for chairperson when secretary has approved -->
+                        <!-- Approve and Disapprove buttons for chairperson -->
                         <?php if ($current_user_role == 'chairperson' && $row['status'] == 'Secretary Approved') { ?>
                             <form action="approve_requisition.php" method="POST" style="display:inline;">
                                 <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
@@ -89,8 +94,8 @@ $requisitions = $stmt->get_result();
                             </form>
                         <?php } ?>
 
-                                               <!-- View PDF button -->
-                                               <form action="view_pdf.php" method="GET" style="display:inline;">
+                        <!-- View PDF button -->
+                        <form action="view_pdf.php" method="GET" style="display:inline;">
                             <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
                             <button type="submit" class="btn btn-primary btn-sm">View PDF</button>
                         </form>

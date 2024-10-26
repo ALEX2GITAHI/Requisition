@@ -19,6 +19,9 @@ if (!isset($_SESSION['user_id'])) {
         case 'patron':
             header("Location: patron_dashboard.php");
             break;
+            case 'admin':
+                header("Location: admin_dashboard.php");
+                break;
         case 'lcc_treasurer':
             header("Location: lcc_treasurer_dashboard.php");
             break;

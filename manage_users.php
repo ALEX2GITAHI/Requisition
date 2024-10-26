@@ -8,9 +8,30 @@ if ($_SESSION['role'] != 'admin') {
     exit;
 }
 
-// Fetch all users for the dashboard
-$user_sql = "SELECT * FROM users";
-$users = $conn->query($user_sql);
+// Pagination setup
+$limit = 7; // Number of results per page
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// Search functionality
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$search_sql = $search ? "WHERE username LIKE '%$search%' OR first_name LIKE '%$search%' OR last_name LIKE '%$search%'" : '';
+
+// Sorting functionality
+$order_by = isset($_GET['sort']) ? $_GET['sort'] : 'id';
+$order = isset($_GET['order']) && $_GET['order'] === 'desc' ? 'DESC' : 'ASC';
+$valid_columns = ['id', 'username', 'role', 'first_name', 'last_name', 'phone_number']; // Valid columns for sorting
+if (!in_array($order_by, $valid_columns)) {
+    $order_by = 'id';
+}
+
+// Fetch users with pagination, search, and sorting
+$user_sql = "SELECT * FROM users $search_sql ORDER BY $order_by $order LIMIT $limit OFFSET $offset";
+$result = $conn->query($user_sql);
+
+// Fetch total users for pagination
+$total_results = $conn->query("SELECT COUNT(*) as count FROM users $search_sql")->fetch_assoc()['count'];
+$total_pages = ceil($total_results / $limit);
 
 // Fetch all groups for the modal
 $group_sql = "SELECT id, group_name FROM groups";
@@ -38,7 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bind_param('sssssssi', $username, $hashed_password, $role, $group_id, $first_name, $last_name, $phone_number, $user_id);
 
         if ($stmt->execute()) {
-    
+            header("Location: manage_users.php?success=User  updated successfully");
+            exit;
         } else {
             echo "Error: " . $conn->error;
         }
@@ -48,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->bind_param('sssssss', $username, $hashed_password, $role, $group_id, $first_name, $last_name, $phone_number);
 
         if ($stmt->execute()) {
-            header("Location: manage_users.php?success=User added successfully");
+            header("Location: manage_users.php?success=User  added successfully");
             exit;
         } else {
             echo "Error: " . $conn->error;
@@ -62,16 +84,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center bg-light p-3 border-bottom">
                 <h4 class="m-0">
-                    <a href="manage_users.php" class="text-decoration-none text-dark">Manage Users</a>
+                    <a href="manage_groups.php" class="text-decoration-none text-dark">Manage Users</a>
                 </h4>
 
                 <!-- Navbar links -->
                 <nav>
-                    <ul class="nav">
+                    <ul class="nav">                      
                         <li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="manage_groups.php">Manage Groups</a></li>
                         <li class="nav-item"><a class="nav-link" href="view_requisitions.php">View Requisitions</a></li>
-                        <li class="nav-item"><a class="nav-link" href="profile.php">Profile</a></li>
                         <li class="nav-item"><a class="nav-link text-danger" href="logout.php">Logout</a></li>
                     </ul>
                 </nav>
@@ -80,20 +101,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
 
     <!-- Main content -->
-    <div class="row mt-3">
+    <div class="row mt-9">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header bg-primary text-white">Manage Users</div>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span>Manage Users</span>
+                    <div class="d-flex">
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Search Groups" value="<?php echo htmlspecialchars($search); ?>">
+                    </div>
+                </div>
                 <div class="card-body">
-                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal"
+                        data-bs-target="#addUserModal">
                         Add New User
                     </button>
+
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Username</th>
-                                <th>Role</th>                            
+                                <th>Role</th>
                                 <th>First Name</th>
                                 <th>Last Name</th>
                                 <th>Phone Number</th>
@@ -102,9 +130,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </thead>
                         <tbody>
                             <?php
-                            // Fetch users from the database
-                            $result = $conn->query("SELECT id, username, role, password, first_name, last_name, phone_number, group_id FROM users");
-
                             if ($result->num_rows > 0) {
                                 while ($row = $result->fetch_assoc()) {
                                     echo "<tr>
@@ -128,6 +153,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             ?>
                         </tbody>
                     </table>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm justify-content-end">
+                            <?php if ($page > 1) { ?>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                        href="?page=<?php echo $page - 1; ?>&search=<?php echo htmlspecialchars($search); ?>&sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>">Previous</a>
+                                </li>
+                            <?php } ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++) { ?>
+                                <li class="page-item <?php echo $page === $i ? 'active' : ''; ?>">
+                                    <a class="page-link"
+                                        href="?page=<?php echo $i; ?>&search=<?php echo htmlspecialchars($search); ?>&sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>"><?php echo $i; ?></a>
+                                </li>
+                            <?php } ?>
+
+                            <?php if ($page < $total_pages) { ?>
+                                <li class="page-item">
+                                    <a class="page-link"
+                                        href="?page=<?php echo $page + 1; ?>&search=<?php echo htmlspecialchars($search); ?>&sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>">Next</a>
+                                </li>
+                            <?php } ?>
+                        </ul>
+                    </nav>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -135,52 +187,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <!-- Add User Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUser ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                <h5 class="modal-title" id="addUser ModalLabel">Add New User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form method="POST">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>                    
-                    </div>
-                    <div class="mb-3">
-                        <label for="first_name" class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="first_name" name="first_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="last_name" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="last_name" name="last_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="phone_number" class="form-label">Phone Number</label>
-                        <input type="text" class="form-control" id="phone_number" name="phone_number" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="role" class="form-label">Role</label>
-                        <select class="form-select" id="role" name="role" required>
-                            <option value="treasurer">Treasurer</option>
-                            <option value="secretary">Secretary</option>
-                            <option value="chairperson">Chairperson</option>
-                            <option value="patron">Patron</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="group_id" class="form-label">Group</label>
-                        <select class="form-select" id="group_id" name="group_id">
-                            <?php while ($group = $groups->fetch_assoc()): ?>
-                                <option value="<?php echo $group['id']; ?>"><?php echo $group['group_name']; ?></option>
-                            <?php endwhile; ?>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="phone_number" name="phone_number" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="treasurer">Treasurer</option>
+                                <option value="secretary">Secretary</option>
+                                <option value="chairperson">Chairperson</option>
+                                <option value="patron">Patron</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="group_id" class="form-label">Group</label>
+                            <select class="form-select" id="group_id" name="group_id">
+                                <?php while ($group = $groups->fetch_assoc()): ?>
+                                    <option value="<?php echo $group['id']; ?>"><?php echo $group['group_name']; ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
                     </div>
                     <input type="hidden" name="user_id" id="user_id">
                     <button type="submit" class="btn btn-primary">Add User</button>
@@ -191,56 +245,58 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <!-- Edit User Modal -->
-<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUser ModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                <h5 class="modal-title" id="editUser ModalLabel">Edit User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form method="POST">
-                    <div class="mb-3">
-                        <label for="edit_username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="edit_username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_password" class="form-label">Password (Leave blank if not changing)</label>
-                        <input type="password" class="form-control" id="edit_password" name="password">
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_first_name" class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_last_name" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_phone_number" class="form-label">Phone Number</label>
-                        <input type="text" class="form-control" id="edit_phone_number" name="phone_number" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_role" class="form-label">Role</label>
-                        <select class="form-select" id="edit_role" name="role" required>
-                            <option value="treasurer">Treasurer</option>
-                            <option value="secretary">Secretary</option>
-                            <option value="chairperson">Chairperson</option>
-                            <option value="patron">Patron</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_group_id" class="form-label">Group</label>
-                        <select class="form-select" id="edit_group_id" name="group_id">
-                            <option value="">None</option>
-                            <?php
-                            // Reset the pointer for fetching groups again
-                            $groups->data_seek(0);
-                            while ($group = $groups->fetch_assoc()) { ?>
-                                <option value="<?= $group['id'] ?>"><?= $group['group_name'] ?></option>
-                            <?php } ?>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="edit_username" name="username" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_password" class="form-label">Password (Leave blank if not changing)</label>
+                            <input type="password" class="form-control" id="edit_password" name="password">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="edit_first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="edit_last_name" name="last_name" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_phone_number" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="edit_phone_number" name="phone_number" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_role" class="form-label">Role</label>
+                            <select class="form-select" id="edit_role" name="role" required>
+                                <option value="treasurer">Treasurer</option>
+                                <option value="secretary">Secretary</option>
+                                <option value="chairperson">Chairperson</option>
+                                <option value="patron">Patron</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_group_id" class="form-label">Group</label>
+                            <select class="form-select" id="edit_group_id" name="group_id">
+                                <option value="">None</option>
+                                <?php
+                                // Reset the pointer for fetching groups again
+                                $groups->data_seek(0);
+                                while ($group = $groups->fetch_assoc()) { ?>
+                                    <option value="<?= $group['id'] ?>"><?= $group['group_name'] ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
                     </div>
                     <input type="hidden" name="user_id" id="edit_user_id">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -251,27 +307,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <script>
-function loadUserData(userId) {
-    // Fetch user data using AJAX
-    fetch('get_user.php?id=' + userId)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('edit_user_id').value = data.id;
-            document.getElementById('edit_username').value = data.username;
-            document.getElementById('edit_first_name').value = data.first_name;
-            document.getElementById('edit_last_name').value = data.last_name;
-            document.getElementById('edit_phone_number').value = data.phone_number;
-            document.getElementById('edit_role').value = data.role;
-            document.getElementById('edit_group_id').value = data.group_id; // Set group
-        })
-        .catch(error => console.error('Error fetching user data:', error));
-}
+    function loadUserData(userId) {
+        // Fetch user data using AJAX
+        fetch('get_user.php?id=' + userId)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('edit_user_id').value = data.id;
+                document.getElementById('edit_username').value = data.username;
+                document.getElementById('edit_first_name').value = data.first_name;
+                document.getElementById('edit_last_name').value = data.last_name;
+                document.getElementById('edit_phone_number').value = data.phone_number;
+                document.getElementById('edit_role').value = data.role;
+                document.getElementById('edit_group_id').value = data.group_id; // Set group
+            })
+            .catch(error => console.error('Error fetching user data:', error));
+    }
 
-function togglePassword(button) {
-    const input = button.previousElementSibling;
-    input.type = input.type === 'password' ? 'text' : 'password';
-    button.textContent = button.textContent === 'View' ? 'Hide' : 'View';
-}
+    function togglePassword(button) {
+        const input = button.previousElementSibling;
+        input.type = input.type === 'password' ? 'text' : 'password';
+        button.textContent = button.textContent === 'View' ? 'Hide' : 'View';
+    }
+
+    // Automatic search functionality
+document.getElementById('search').addEventListener('input', function() {
+    const searchValue = this.value.trim();
+    if (searchValue) {
+        window.location.href = `?search=${searchValue}&sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>`;
+    } else {
+        window.location.href = `?sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>`;
+    }
+});
+
+document.getElementById('searchBtn').addEventListener('click', function(event) {
+    event.preventDefault();
+    const searchValue = document.getElementById('search').value.trim();
+    if (searchValue) {
+        window.location.href = `?search=${searchValue}&sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>`;
+    } else {
+        window.location.href = `?sort=<?php echo $order_by; ?>&order=<?php echo $order; ?>`;
+    }
+});
 </script>
 
 <?php include('footer.php'); ?>

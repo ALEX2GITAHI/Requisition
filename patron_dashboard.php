@@ -62,7 +62,7 @@ $result = $stmt->get_result();
                                     <input type="text" name="comment" placeholder="Reason for disapproval" required>
                                     <button type="submit" class="btn btn-danger btn-sm">Disapprove</button>
                                 </form>
-                            <?php } elseif ($row['status'] == 'Disapproved by') { ?>
+                            <?php } elseif ($row['status'] == 'Disapproved by LCC Treasurer') { ?>
                                 <!-- Show LCC Treasurer's disapproval comment and options to approve or reject -->
                                 <div class="alert alert-warning" role="alert">
                                     <strong>Disapproval Comment from LCC Treasurer:</strong> <?= htmlspecialchars($row['disapproval_comment']); ?>
