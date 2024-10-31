@@ -1,25 +1,37 @@
 <?php
-session_start();
-require 'db.php';
-include 'header.php';
-include 'navbar.php';
+include('header.php');
+include('navbar.php');
+include('db.php');
 
-// Ensure the user is the patron
-if ($_SESSION['role'] != 'patron') {
-    header("Location: index.php");
-    exit;
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: index.php');
+    exit();
 }
 
-// Fetch requisitions for the patron's group
-$group_id = $_SESSION['group_id'];
-$sql = "SELECT r.id, r.requisition_id, g.group_name, r.total_amount, r.status, r.disapproval_comment
-        FROM requisitions r
-        JOIN groups g ON r.group_id = g.id
-        WHERE r.group_id = ? AND (r.status = 'approved_by_chair' OR r.status = 'Disapproved by LCC Treasurer')";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('i', $group_id);
+// Get current user's information (role and group)
+$current_user_id = $_SESSION['user_id'];
+
+// Retrieve the user's group ID and role
+$user_query = "SELECT group_id, role FROM users WHERE id = ?";
+$user_stmt = $conn->prepare($user_query);
+$user_stmt->bind_param("i", $current_user_id);
+$user_stmt->execute();
+$user_result = $user_stmt->get_result();
+$user_info = $user_result->fetch_assoc();
+$current_user_group_id = $user_info['group_id'];
+$current_user_role = $user_info['role'];
+
+// Fetch requisition data for the user's group
+$query = "SELECT r.id, g.group_name, r.total_amount, r.status, r.disapproval_comment, u.role AS disapprover_role 
+          FROM requisitions r 
+          JOIN groups g ON r.group_id = g.id 
+          LEFT JOIN users u ON u.id = r.updated_by
+          WHERE r.group_id = ?";  // Filter by the user's group
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $current_user_group_id);
 $stmt->execute();
-$result = $stmt->get_result();
+$requisitions = $stmt->get_result();
 ?>
 
 <!-- Table for displaying requisition statuses -->
@@ -33,50 +45,60 @@ $result = $stmt->get_result();
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Requisition ID</th>
-                    <th>Group</th>
+                    <th>Group Name</th>
                     <th>Total Amount</th>
                     <th>Status</th>
-                    <th>PDF</th>
-                    <th>Actions</th>
+                    <th>Actions</th> <!-- Update header to include Actions -->
                 </tr>
             </thead>
             <tbody>
-                <?php while ($row = $result->fetch_assoc()) { ?>
+                <?php while ($row = $requisitions->fetch_assoc()) { ?>
                     <tr>
                         <td><?= $row['id'] ?></td>
-                        <td><?= $row['requisition_id'] ?></td>
                         <td><?= $row['group_name'] ?></td>
                         <td><?= number_format($row['total_amount'], 2) ?></td>
                         <td><?= ucfirst($row['status']) ?></td>
-                        <td><a href="pdfs/requisition_<?= $row['requisition_id'] ?>.pdf" target="_blank">View PDF</a></td>
                         <td>
-                            <?php if ($row['status'] == 'approved_by_chair') { ?>
-                                <!-- Approve and Disapprove options for requisitions approved by chair -->
-                                <form action="approve_requisition.php" method="POST" style="display:inline;">
-                                    <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                                </form>
-                                <form action="disapprove_requisition.php" method="POST" style="display:inline;">
-                                    <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                    <input type="text" name="comment" placeholder="Reason for disapproval" required>
-                                    <button type="submit" class="btn btn-danger btn-sm">Disapprove</button>
-                                </form>
-                            <?php } elseif ($row['status'] == 'Disapproved by LCC Treasurer') { ?>
-                                <!-- Show LCC Treasurer's disapproval comment and options to approve or reject -->
-                                <div class="alert alert-warning" role="alert">
-                                    <strong>Disapproval Comment from LCC Treasurer:</strong> <?= htmlspecialchars($row['disapproval_comment']); ?>
+                            <div style="display: flex; align-items: center;">
+                                <!-- Disapproval comment with the role of the disapprover -->
+                                <?php if (strpos($row['status'], 'Disapproved') !== false && !empty($row['disapproval_comment'])) { ?>
+                                    <div class="alert alert-warning" role="alert" style="margin-right: 10px;">
+                                        <strong>Disapproval Comment
+                                            (<?= htmlspecialchars($row['disapprover_role']) ?>):</strong>
+                                        <?= htmlspecialchars($row['disapproval_comment']); ?>
+                                    </div>
+                                <?php } ?>
+                                    <!-- Approve and Disapprove buttons for secretary -->
+                                    <?php if ($current_user_role == 'patron') { ?>
+                                        <?php if ($row['status'] == 'Chairperson Approved') { ?>
+                                            <form action="approve_requisition.php" method="POST" style="display:inline;">
+                                                <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
+                                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                            </form>
+                                            <form action="disapprove_requisition.php" method="POST" style="display:inline;">
+                                                <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
+                                                <input type="text" name="comment" placeholder="Reason for disapproval" required>
+                                                <button type="submit" class="btn btn-danger btn-sm">Disapprove</button>
+                                            </form>
+                                        <?php } elseif ($row['status'] == 'Disapproved by LCC Treasurer') { ?>
+                                            <form action="approve_requisition.php" method="POST" style="display:inline;">
+                                                <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
+                                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                            </form>
+                                            <form action="disapprove_requisition.php" method="POST" style="display:inline;">
+                                                <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
+                                                <input type=" text" name="comment" placeholder="Reason for disapproval" required>
+                                                <button type="submit" class="btn btn-danger btn-sm">Disapprove</button>
+                                            </form>
+                                        <?php } ?>
+                                    <?php } ?>
+
+                                    <!-- View PDF button -->
+                                    <form action="view_pdf.php" method="GET" style="display:inline;">
+                                        <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
+                                        <button type="submit" class="btn btn-primary btn-sm">View PDF</button>
+                                    </form>
                                 </div>
-                                <form action="approve_requisition.php" method="POST" style="display:inline;">
-                                    <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                    <button type="submit" class="btn btn-success btn-sm">Approve Again</button>
-                                </form>
-                                <form action="reject_requisition.php" method="POST" style="display:inline;">
-                                    <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                    <input type="text" name="comment" placeholder="Reason for disapproval" required>
-                                    <button type="submit" class="btn btn-danger btn-sm">Reject Again</button>
-                                </form>
-                            <?php } ?>
                         </td>
                     </tr>
                 <?php } ?>

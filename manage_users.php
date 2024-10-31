@@ -1,4 +1,6 @@
 <?php
+ob_start(); // Start output buffering
+
 include('header.php');
 require 'db.php';
 
@@ -8,8 +10,14 @@ if ($_SESSION['role'] != 'admin') {
     exit;
 }
 
+// Check if there's a success message
+$success_message = '';
+if (isset($_GET['success'])) {
+    $success_message = htmlspecialchars($_GET['success']);
+}
+
 // Pagination setup
-$limit = 7; // Number of results per page
+$limit = 6; // Number of results per page
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
@@ -23,10 +31,13 @@ $order = isset($_GET['order']) && $_GET['order'] === 'desc' ? 'DESC' : 'ASC';
 $valid_columns = ['id', 'username', 'role', 'first_name', 'last_name', 'phone_number']; // Valid columns for sorting
 if (!in_array($order_by, $valid_columns)) {
     $order_by = 'id';
+    $order = 'ASC';
 }
 
 // Fetch users with pagination, search, and sorting
-$user_sql = "SELECT * FROM users $search_sql ORDER BY $order_by $order LIMIT $limit OFFSET $offset";
+$user_sql = "SELECT users.*, groups.group_name FROM users 
+             LEFT JOIN groups ON users.group_id = groups.id 
+             $search_sql ORDER BY $order_by $order LIMIT $limit OFFSET $offset";
 $result = $conn->query($user_sql);
 
 // Fetch total users for pagination
@@ -82,11 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="container-fluid p-0">
     <div class="row">
         <div class="col-md-12">
+            <?php if ($success_message): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php echo $success_message; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </ div>
+            <?php endif; ?>
             <div class="d-flex justify-content-between align-items-center bg-light p-3 border-bottom">
                 <h4 class="m-0">
                     <a href="manage_groups.php" class="text-decoration-none text-dark">Manage Users</a>
                 </h4>
-
                 <!-- Navbar links -->
                 <nav>
                     <ul class="nav">                      
@@ -117,43 +133,93 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </button>
 
                     <table class="table table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Username</th>
-                                <th>Role</th>
-                                <th>First Name</th>
-                                <th>Last Name</th>
-                                <th>Phone Number</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            if ($result->num_rows > 0) {
-                                while ($row = $result->fetch_assoc()) {
-                                    echo "<tr>
-            <td>{$row['id']}</td>
-            <td>{$row['username']}</td>
-            <td>{$row['role']}</td>            
-            <td>{$row['first_name']}</td>
-            <td>{$row['last_name']}</td>
-            <td>{$row['phone_number']}</td>
-            <td>
-                <a href='#' class='btn btn-warning btn-sm' data-bs-toggle='modal' data-bs-target='#editUserModal' onclick='loadUserData({$row['id']})'>
-                    Edit
-                </a>
-                <a href='delete_user.php?id={$row['id']}' class='btn btn-danger btn-sm'>Delete</a>
-            </td>
-        </tr>";
-                                }
-                            } else {
-                                echo "<tr><td colspan='8'>No users found</td></tr>";
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-
+            <thead>
+                <tr>
+                    <th>
+                        <a href="?sort=id&order=<?php echo $order_by === 'id' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            # 
+                            <?php if ($order_by === 'id') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=username&order=<?php echo $order_by === 'username' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            Username 
+                            <?php if ($order_by === 'username') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=role&order=<?php echo $order_by === 'role' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            Role 
+                            <?php if ($order_by === 'role') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=group_name&order=<?php echo $order_by === 'group_name' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            Group 
+                            <?php if ($order_by === 'group_name') { ?>
+                                <i class="fas fa-sort- <?= $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=first_name&order=<?php echo $order_by === 'first_name' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            First Name 
+                            <?php if ($order_by === 'first_name') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=last_name&order=<?php echo $order_by === 'last_name' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            Last Name 
+                            <?php if ($order_by === 'last_name') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort=phone_number&order=<?php echo $order_by === 'phone_number' ? ($order === 'ASC' ? 'DESC' : 'ASC') : 'ASC'; ?>">
+                            Phone Number 
+                            <?php if ($order_by === 'phone_number') { ?>
+                                <i class="fas fa-sort-<?php echo $order === 'ASC' ? 'up' : 'down'; ?>"></i>
+                            <?php } ?>
+                        </a>
+                    </th>                                
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        echo "<tr>
+                            <td>{$row['id']}</td>
+                            <td>{$row['username']}</td>
+                            <td>{$row['role']}</td>   
+                            <td>{$row['group_name']}</td>         
+                            <td>{$row['first_name']}</td>
+                            <td>{$row['last_name']}</td>
+                            <td>{$row['phone_number']}</td>            
+                            <td>
+                                <a href='#' class='btn btn-warning btn-sm' data-bs-toggle='modal' data-bs-target='#editUserModal' onclick='loadUserData({$row['id']}) '>
+                                    Edit
+                                </a>
+                                <a href='delete_user.php?id={$row['id']}' class='btn btn-danger btn-sm'>Delete</a>
+                            </td>
+                        </tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='8'>No users found</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
                     <!-- Pagination -->
                     <nav aria-label="Page navigation">
                         <ul class="pagination pagination-sm justify-content-end">
@@ -224,9 +290,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <option value="secretary">Secretary</option>
                                 <option value="chairperson">Chairperson</option>
                                 <option value="patron">Patron</option>
+                                <option value="patron">LCC Treasurer</option>
+                                <option value="patron">LCC Secretary</option>
+                                <option value="patron">LCC Chair</option>
                                 <option value="admin">Admin</option>
                             </select>
-                        </div>
+ </div>
                         <div class="col-md-4 mb-3">
                             <label for="group_id" class="form-label">Group</label>
                             <select class="form-select" id="group_id" name="group_id">
@@ -245,11 +314,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <!-- Edit User Modal -->
-<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUser ModalLabel" aria-hidden="true">
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUser  ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editUser ModalLabel">Edit User</h5>
+                <h5 class="modal-title" id="editUser  ModalLabel">Edit User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -317,7 +386,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 document.getElementById('edit_first_name').value = data.first_name;
                 document.getElementById('edit_last_name').value = data.last_name;
                 document.getElementById('edit_phone_number').value = data.phone_number;
-                document.getElementById('edit_role').value = data.role;
+                document.getElementById('edit_role').value = data.role ;
                 document.getElementById('edit_group_id').value = data.group_id; // Set group
             })
             .catch(error => console.error('Error fetching user data:', error));

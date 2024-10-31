@@ -42,10 +42,7 @@ include('db.php');
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="view_requisitions.php">View Requisitions</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile.php">Profile</a>
-                        </li>
+                        </li>                        
                         <li class="nav-item">
                             <a class="nav-link text-danger" href="logout.php">Logout</a>
                         </li>
@@ -128,20 +125,21 @@ include('db.php');
 <!-- Chart.js Script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Data for Requisitions Status
-    const requisitionsData = {
-        labels: ['Pending', 'Approved', 'Disapproved'],
-        datasets: [{
-            label: 'Requisitions Status',
-            data: [<?php
-                $pending = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status = 'Pending'")->fetch_assoc()['count'];
-                $approved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status LIKE '%Approved%'")->fetch_assoc()['count'];
-                $disapproved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status = 'Disapproved'")->fetch_assoc()['count'];
-                echo "$pending, $approved, $disapproved";
-            ?>],
-            backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
-        }]
-    };
+  // Data for Requisitions Status
+const requisitionsData = {
+    labels: ['Pending', 'Approved', 'Disapproved'],
+    datasets: [{
+        label: 'Requisitions Status',
+        data: [<?php
+            // Count of requisitions based on their status
+            $pending = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status = 'Pending'")->fetch_assoc()['count'];
+            $approved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status LIKE '%Approved%'")->fetch_assoc()['count'];
+            $disapproved = $conn->query("SELECT COUNT(*) AS count FROM requisitions WHERE status LIKE '%Disapproved%'")->fetch_assoc()['count']; // Updated to include all disapproved statuses
+            echo "$pending, $approved, $disapproved";
+        ?>],
+        backgroundColor: ['#f39c12', '#2ecc71', '#e74c3c']
+    }]
+};
 
     // Data for Groups Chart
     const groupsData = {

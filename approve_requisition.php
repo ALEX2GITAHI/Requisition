@@ -19,7 +19,7 @@ function redirectToDashboard($role) {
             header('Location: secretary_dashboard.php');
             break;
         case 'chairperson':
-            header('Location: chairperson_dashboard.php');
+            header('Location: chair_dashboard.php');
             break;
         case 'patron':
             header('Location: patron_dashboard.php');
@@ -60,49 +60,49 @@ if (isset($_POST['requisition_id'])) {
     $next_stage = '';
     switch ($current_role) {
         case 'treasurer':
-            if ($current_status == 'Pending' || $current_status == 'Disapproved') {
+            if ($current_status == 'Pending' || $current_status == 'Disapproved by Secretary') {
                 $next_stage = 'Treasurer Approved';
             }
             break;
         case 'secretary':
-            if ($current_status == 'Treasurer Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'Treasurer Approved' || $current_status == 'Disapproved by Chairperson') {
                 $next_stage = 'Secretary Approved';
             }
             break;
         case 'chairperson':
-            if ($current_status == 'Secretary Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'Secretary Approved' || $current_status == 'Disapproved by Patron') {
                 $next_stage = 'Chairperson Approved';
             }
             break;
         case 'patron':
-            if ($current_status == 'Chairperson Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'Chairperson Approved' || $current_status == 'Disapproved by LCC Treasurer') {
                 $next_stage = 'Patron Approved';
             }
             break;
         case 'lcc_treasurer':
-            if ($current_status == 'Patron Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'Patron Approved' || $current_status == 'Disapproved by LCC Secretary') {
                 $next_stage = 'LCC Treasurer Approved';
             }
             break;
         case 'lcc_secretary':
-            if ($current_status == 'LCC Treasurer Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'LCC Treasurer Approved' || $current_status == 'Disapproved by LCC Chairperson') {
                 $next_stage = 'LCC Secretary Approved';
             }
             break;
         case 'lcc_chair':
-            if ($current_status == 'LCC Secretary Approved' || $current_status == 'Disapproved') {
+            if ($current_status == 'LCC Secretary Approved') {
                 $next_stage = 'LCC Chairperson Approved';
             }
             break;
     }
 
-    // Update the requisition and modify the approval record in the approvals table
+    // Update the requisition and modify the approval record
     if (!empty($next_stage)) {
         // Update the requisition status and updated_by field
         $query = "UPDATE requisitions SET status = ?, approved_by = ?, updated_by = ? WHERE id = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("ssii", $next_stage, $current_user_id, $current_user_id, $requisition_id);
-        
+
         if ($stmt->execute()) {
             // Update the approval record if it exists, otherwise insert it
             $query_approval = "UPDATE approvals SET status = 'approved', approved_by = ?, role = ? 
@@ -135,3 +135,4 @@ if (isset($_POST['requisition_id'])) {
 
     $conn->close();
 }
+?>

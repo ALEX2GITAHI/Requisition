@@ -1,5 +1,4 @@
 <?php
-session_start();
 include('header.php');
 include('navbar.php');
 include('db.php');
@@ -77,26 +76,28 @@ $requisitions = $stmt->get_result();
                     <td><?= number_format($row['total_amount'], 2) ?></td>
                     <td><?= ucfirst($row['status']) ?></td>
                     <td>
-                        <!-- All actions are aligned on one line -->
                         <div style="display: flex; align-items: center;">
 
                             <!-- Disapproval comment with the role of the disapprover -->
-                            <?php if ($row['status'] == 'Disapproved' && !empty($row['disapproval_comment'])) { ?>
+                            <?php if (strpos($row['status'], 'Disapproved') !== false && !empty($row['disapproval_comment'])) { ?>
                                 <div class="alert alert-warning" role="alert" style="margin-right: 10px;">
                                     <strong>Disapproval Comment (<?= htmlspecialchars($row['disapprover_role']) ?>):</strong> <?= htmlspecialchars($row['disapproval_comment']); ?>
                                 </div>
                             <?php } ?>
                             
-                            <!-- Approve and Disapprove buttons for Pending requisitions -->
-                            <?php if ($row['status'] == 'Pending') { ?>
+                            <!-- Approve and Delete buttons for Pending and Disapproved requisitions -->
+                            <?php if ($row['status'] == 'Pending' || $row['status'] == 'Disapproved by Secretary') { ?>
                                 <form action="approve_requisition.php" method="POST" style="margin-right: 10px;">
                                     <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
                                     <button type="submit" class="btn btn-success btn-sm">Approve</button>
                                 </form>
-                                <form action="disapprove_requisition.php" method="POST" style="margin-right: 10px;">
+                            <?php } ?>
+                            
+                            <!-- Show delete button only for disapproved requisitions -->
+                            <?php if ($row['status'] == 'Disapproved by Secretary') { ?>
+                                <form action="delete_requisition.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this requisition?')" style="margin-right: 10px;">
                                     <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                    <input type="text" name="comment" placeholder="Reason for disapproval" required>
-                                    <button type="submit" class="btn btn-danger btn-sm">Disapprove</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                                 </form>
                             <?php } ?>
 
@@ -104,12 +105,6 @@ $requisitions = $stmt->get_result();
                             <form action="view_pdf.php" method="GET" style="margin-right: 10px;">
                                 <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
                                 <button type="submit" class="btn btn-primary btn-sm">View PDF</button>
-                            </form>
-
-                            <!-- Delete Requisition button -->
-                            <form action="delete_requisition.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this requisition?')" style="margin-right: 10px;">
-                                <input type="hidden" name="requisition_id" value="<?= $row['id'] ?>">
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                             </form>
                         </div>
                     </td>

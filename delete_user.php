@@ -1,14 +1,10 @@
 <?php
 // delete_user.php
 
-session_start();
+include('header.php');
 include('db.php');
 
 // Check if admin is logged in
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: index.php');
-    exit();
-}
 
 // Check if the user ID is provided
 if (isset($_GET['id'])) {
@@ -25,7 +21,7 @@ if (isset($_GET['id'])) {
     $stmt->bind_param("i", $user_id);
     
     if ($stmt->execute()) {
-        header('Location: admin_dashboard.php?message=User deleted successfully.');
+        header('Location: manage_user.php?message=User deleted successfully.');
     } else {
         echo "Error deleting user: " . $stmt->error;
     }

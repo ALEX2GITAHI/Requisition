@@ -26,10 +26,11 @@ CREATE TABLE IF NOT EXISTS requisitions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     group_id INT,
     created_by INT,
-    updated_by INT,  -- New column for tracking who last updated the requisition
+    updated_by INT,  -- Tracks who last updated the requisition
+    disapproved_by INT,  -- Stores who disapproved the requisition
     total_amount DECIMAL(10, 2),
     requisition_pdf LONGBLOB,
-    approved_by INT,  -- Column to store who approved the requisition
+    approved_by INT,  -- Stores who approved the requisition
     status ENUM(
         'Pending', 
         'Treasurer Approved', 
@@ -40,7 +41,12 @@ CREATE TABLE IF NOT EXISTS requisitions (
         'LCC Secretary Approved', 
         'LCC Chairperson Approved', 
         'Disbursed', 
-        'Disapproved'
+        'Disapproved by Secretary',
+        'Disapproved by Chairperson',
+        'Disapproved by Patron',
+        'Disapproved by LCC Treasurer',
+        'Disapproved by LCC Secretary',
+        'Disapproved by LCC Chairperson'
     ) DEFAULT 'Pending',
     disapproval_comment TEXT,  -- Stores the comment when a requisition is disapproved
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -48,7 +54,8 @@ CREATE TABLE IF NOT EXISTS requisitions (
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL  -- Foreign key for updated_by
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (disapproved_by) REFERENCES users(id) ON DELETE SET NULL  -- Foreign key for disapproved_by
 );
 
 -- Create approvals table if not exists

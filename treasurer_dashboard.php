@@ -1,5 +1,4 @@
 <?php
-session_start();
 include('header.php');
 include('navbar.php');
 include('db.php');
