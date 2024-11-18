@@ -42,7 +42,10 @@ include('db.php');
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="view_requisitions.php">View Requisitions</a>
-                        </li>                        
+                        </li>        
+                        <li class="nav-item">
+                            <a class="nav-link" href="message_dashboard.php">Message</a>
+                        </li>                 
                         <li class="nav-item">
                             <a class="nav-link text-danger" href="logout.php">Logout</a>
                         </li>
