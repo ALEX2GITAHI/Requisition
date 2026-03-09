@@ -1,88 +1,112 @@
 <?php
 session_start();
-require 'db.php'; // Include the database connection file
+require 'db.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // Fetch the user record by username
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (empty($username) || empty($password)) {
+        header('Location: index.php?error=Please fill in all fields');
+        exit;
+    }
+
     $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
 
-    if ($stmt) {
-        $stmt->bind_param('s', $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
+    if (!$stmt) {
+        die("Database error: " . $conn->error);
+    }
 
-        // Check if user exists and verify the hashed password
-        if ($user && password_verify($password, $user['password'])) {
-            // Password is correct, proceed with session setup
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['username'] = $user['username'];
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
 
-            // Fetch group name by group_id
-            $group_id = $user['group_id'];
-            $group_query = "SELECT group_name FROM groups WHERE id = ?";
-            $group_stmt = $conn->prepare($group_query);
-            $group_stmt->bind_param('i', $group_id);
-            $group_stmt->execute();
-            $group_result = $group_stmt->get_result();
+    // ---- PASSWORD CHECK ----
+    $login_success = false;
 
-            if ($group_result->num_rows === 1) {
-                $group = $group_result->fetch_assoc();
-                $_SESSION['group_name'] = $group['group_name'];
-            } else {
-                $_SESSION['group_name'] = 'Default Group';
-            }
+    if ($user) {
 
-            // Redirect based on user role
-            switch ($user['role']) {
-                case 'lcc_treasurer':
-                    header('Location: lcc_treasurer_dashboard.php');
-                    exit;
-                case 'lcc_secretary':
-                    header('Location: lcc_secretary_dashboard.php');
-                    exit;
-                case 'lcc_chair':
-                    header('Location: lcc_chair_dashboard.php');
-                    exit;
-                case 'patron':
-                    header('Location: patron_dashboard.php');
-                    exit;
-                case 'treasurer':
-                    header('Location: treasurer_dashboard.php');
-                    exit;
-                case 'secretary':
-                    header('Location: secretary_dashboard.php');
-                    exit;
-                case 'chairperson':
-                    header('Location: chair_dashboard.php');
-                    exit;
-                case 'admin':
-                    header('Location: admin_dashboard.php');
-                    exit;
-                default:
-                    error_log("Unknown user role: " . $user['role']);
-                    header('Location: index.php?error=Unknown user role: ' . urlencode($user['role']));
-                    exit;
-            }
-        } else {
-            // Invalid username or password
-            header('Location: index.php?error=Invalid username or password');
-            exit;
+        // Case 1: Password is hashed
+        if (password_verify($password, $user['password'])) {
+            $login_success = true;
         }
+
+        // Case 2: Password is plain text (temporary support)
+        elseif ($password === $user['password']) {
+            $login_success = true;
+
+            // OPTIONAL: Auto-hash plain password after first login
+            $newHash = password_hash($password, PASSWORD_DEFAULT);
+            $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $updateStmt->bind_param("si", $newHash, $user['id']);
+            $updateStmt->execute();
+        }
+    }
+
+    if ($login_success) {
+
+        // Regenerate session ID (security)
+        session_regenerate_id(true);
+
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['username'] = $user['username'];
+
+        // Fetch group name
+        $group_stmt = $conn->prepare("SELECT group_name FROM groups WHERE id = ?");
+        $group_stmt->bind_param('i', $user['group_id']);
+        $group_stmt->execute();
+        $group_result = $group_stmt->get_result();
+
+        if ($group_result->num_rows === 1) {
+            $_SESSION['group_name'] = $group_result->fetch_assoc()['group_name'];
+        } else {
+            $_SESSION['group_name'] = 'Default Group';
+        }
+
+        // Redirect by role
+        switch ($user['role']) {
+            case 'lcc_treasurer':
+                header('Location: lcc_treasurer_dashboard.php');
+                break;
+            case 'lcc_secretary':
+                header('Location: lcc_secretary_dashboard.php');
+                break;
+            case 'lcc_chair':
+                header('Location: lcc_chair_dashboard.php');
+                break;
+            case 'patron':
+                header('Location: patron_dashboard.php');
+                break;
+            case 'treasurer':
+                header('Location: treasurer_dashboard.php');
+                break;
+            case 'secretary':
+                header('Location: secretary_dashboard.php');
+                break;
+            case 'chairperson':
+                header('Location: chair_dashboard.php');
+                break;
+            case 'admin':
+                header('Location: admin_dashboard.php');
+                break;
+            default:
+                header('Location: index.php?error=Unknown user role');
+                exit;
+        }
+        exit;
     } else {
-        // SQL error handling
-        die("Error preparing statement: " . $conn->error);
+        header('Location: index.php?error=Invalid username or password');
+        exit;
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,8 +191,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
@@ -225,4 +254,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         });
     </script>
 </body>
+
 </html>

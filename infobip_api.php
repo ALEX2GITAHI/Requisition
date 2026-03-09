@@ -1,36 +1,39 @@
 <?php
-function sendMessage($phoneNumber, $message) {
-    $url = "https://api.infobip.com/sms/1/text/single";
-    $apiKey = "c4cda6284765f0750dbb9836d496a798-38728d04-de3c-4005-9cd3-9d7b2334a864"; // Replace with your actual API key
+function sendMessage($to, $text)
+{
+    $url = "https://api.infobip.com/sms/2/text/advanced";
+    $apiKey = "6a07e3d405dd99d826800d011f336dc6-274ecbf9-34e1-4f9e-9477-4fc17c175a30";  // Paste your API key here
+    $sender = "PCEA MUKINYI";          // Approved sender name
 
     $data = [
-        "from" => "ALEX",
-        "to" => $phoneNumber,
-        "text" => $message
-    ];
-
-    $options = [
-        "http" => [
-            "header" => [
-                "Content-Type: application/json",
-                "Authorization: App $apiKey" // Try "Bearer" if "App" fails
-            ],
-            "method"  => "POST",
-            "content" => json_encode($data)
+        "messages" => [
+            [
+                "from" => $sender,
+                "destinations" => [["to" => $to]],
+                "text" => $text
+            ]
         ]
     ];
 
-    $context = stream_context_create($options);
-    $result = file_get_contents($url, false, $context);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: App $apiKey",
+        "Content-Type: application/json",
+        "Accept: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-    if ($result === FALSE) {
-        // Display the response headers to help with debugging
-        echo "Failed to send message to $phoneNumber.";
-        $error = error_get_last();
-        echo "\nError details: " . $error['message'];
-    } else {
-        echo "Message sent successfully!";
+    $response = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($err) {
+        error_log("Infobip API Error: " . $err);
+        return false;
     }
-}
-?>
 
+    $res = json_decode($response, true);
+    return isset($res['messages'][0]['status']['groupId']) && $res['messages'][0]['status']['groupId'] == 1;
+}

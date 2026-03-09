@@ -1,22 +1,23 @@
 <?php
-// Include database connection and Infobip API functions
-require 'db.php';
-include 'infobip_api.php';
+require 'db.php';           // Database connection
+include 'infobip_api.php';  // Infobip API functions
 
-// Ensure database connection is established
+// Ensure DB connection
 if (!isset($conn)) {
     die("Database connection error.");
 }
 
-// Capture form inputs and verify template_id
-$template_id = isset($_POST['template_id']) ? intval($_POST['template_id']) : null;
-$recipient_type = $_POST['recipient_type'] ?? null;
-$custom_message = $_POST['custom_message'] ?? '';
-$user_id = isset($_POST['user']) ? intval($_POST['user']) : null; // For individual user selection
+// Capture form inputs
+$template_id     = $_POST['template_id'] ?? null;
+$recipient_type  = $_POST['recipient_type'] ?? null; // all, role, group, individual
+$custom_message  = $_POST['custom_message'] ?? '';
+$user_id         = $_POST['user'] ?? null;           // for individual recipient
+$requisition_id  = $_POST['requisition_id'] ?? null;
+$status_type     = $_POST['status_type'] ?? 'approval'; // 'approval' or 'disapproval'
 
-// Ensure `template_id` is provided
-if (!$template_id) {
-    die("Template ID is required.");
+// Check for individual recipient
+if ($recipient_type === 'individual' && empty($user_id)) {
+    die("User ID not provided for individual recipient type.");
 }
 
 // Fetch the template text
@@ -28,72 +29,106 @@ $template_stmt->fetch();
 $template_stmt->close();
 
 if (!$template_text) {
-    die("Template not found. Please check the selected template.");
+    die("Template not found.");
 }
-// Function to log sent messages
+
+// Log message function
 function logMessage($conn, $userId, $messageText, $status = 'sent') {
-    $stmt = $conn->prepare("INSERT INTO message_log (user_id, message_text, status) VALUES (?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO message_logs (user_id, message_text, status) VALUES (?, ?, ?)");
+    if (!$stmt) {
+        echo "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+        return;
+    }
     $stmt->bind_param("iss", $userId, $messageText, $status);
     $stmt->execute();
     $stmt->close();
 }
-// Determine recipients based on recipient type
+
+// Determine recipients
 $recipients = [];
 switch ($recipient_type) {
     case 'all':
-        $recipients_query = "SELECT id, first_name, last_name, phone_number, role, group_name FROM users JOIN groups ON users.group_id = groups.id";
-        $recipients_result = $conn->query($recipients_query);
-        $recipients = $recipients_result->fetch_all(MYSQLI_ASSOC);
+        $res = $conn->query("SELECT users.id AS user_id, first_name, last_name, phone_number, role, group_name 
+                             FROM users 
+                             JOIN groups ON users.group_id = groups.id");
+        $recipients = $res->fetch_all(MYSQLI_ASSOC);
         break;
+
     case 'role':
-        $role = $_POST['role'] ?? 'treasurer'; // Set role dynamically as needed
-        $stmt = $conn->prepare("SELECT id, first_name, last_name, phone_number, role, group_name FROM users JOIN groups ON users.group_id = groups.id WHERE role = ?");
+        $role = $_POST['role'] ?? 'treasurer';
+        $stmt = $conn->prepare("SELECT users.id AS user_id, first_name, last_name, phone_number, role, group_name 
+                                FROM users 
+                                JOIN groups ON users.group_id = groups.id 
+                                WHERE role = ?");
         $stmt->bind_param("s", $role);
         $stmt->execute();
         $recipients = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         break;
+
     case 'group':
-        $group_id = $_POST['group_id'] ?? 2; // Set group_id dynamically as needed
-        $stmt = $conn->prepare("SELECT id, first_name, last_name, phone_number, role, group_name FROM users JOIN groups ON users.group_id = groups.id WHERE group_id = ?");
+        $group_id = $_POST['group_id'] ?? 0;
+        $stmt = $conn->prepare("SELECT users.id AS user_id, first_name, last_name, phone_number, role, group_name 
+                                FROM users 
+                                JOIN groups ON users.group_id = groups.id 
+                                WHERE group_id = ?");
         $stmt->bind_param("i", $group_id);
         $stmt->execute();
         $recipients = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         break;
+
     case 'individual':
-        if (empty($user_id)) {
-            die("User ID not provided for individual recipient type.");
-        }
-        $stmt = $conn->prepare("SELECT id, first_name, last_name, phone_number, role, group_name FROM users JOIN groups ON users.group_id = groups.id WHERE users.id = ?");
+        $stmt = $conn->prepare("SELECT users.id AS user_id, first_name, last_name, phone_number, role, group_name 
+                                FROM users 
+                                JOIN groups ON users.group_id = groups.id 
+                                WHERE users.id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $recipients = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         break;
+
     default:
         die("Invalid recipient type.");
 }
 
-// Process each recipient and log the message
+// Send messages
 foreach ($recipients as $recipient) {
+    // Format phone number to international format (+254...)
+    $phone = $recipient['phone_number'];
+    if (substr($phone, 0, 1) === '0') {
+        $phone = '+254' . substr($phone, 1);
+    }
+
+    // Replace template placeholders
     $message = str_replace(
-        ['{{first_name}}', '{{last_name}}', '{{group_name}}', '{{role}}', '{{message_content}}'],
-        [$recipient['first_name'], $recipient['last_name'], $recipient['group_name'], $recipient['role'], $custom_message],
+        ['{{first_name}}', '{{last_name}}', '{{group_name}}', '{{role}}', '{{message_content}}', '{{requisition_id}}'],
+        [$recipient['first_name'], $recipient['last_name'], $recipient['group_name'], $recipient['role'], $custom_message, $requisition_id],
         $template_text
     );
 
-    // Send the message and capture the status
-    $status = sendMessage($recipient['phone_number'], $message) ? 'sent' : 'not sent';
+    // Send via Infobip
+    $sendStatus = sendMessage($phone, $message) ? 'sent' : 'failed';
 
-    // Log message in `message_log` table
-    $stmt = $conn->prepare("INSERT INTO message_log (user_id, message_text, sent_at, status) VALUES (?, ?, NOW(), ?)");
-    $stmt->bind_param("iss", $recipient['id'], $message, $status);
+    // Log message
+    logMessage($conn, $recipient['user_id'], $message, $sendStatus);
+}
+
+// Update requisition status if required
+if ($requisition_id) {
+    if ($status_type === 'approval') {
+        $stmt = $conn->prepare("UPDATE requisitions SET status='approved', updated_at=NOW() WHERE id=?");
+    } else if ($status_type === 'disapproval') {
+        $stmt = $conn->prepare("UPDATE requisitions SET status='disapproved', updated_at=NOW() WHERE id=?");
+    }
+    $stmt->bind_param("i", $requisition_id);
     $stmt->execute();
     $stmt->close();
 }
 
-echo "Messages processed and logged successfully.";
+echo "Messages sent and logged successfully.";
+
 ?>
 
 <!DOCTYPE html>

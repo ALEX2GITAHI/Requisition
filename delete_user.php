@@ -1,31 +1,36 @@
 <?php
-// delete_user.php
+session_start();
+require 'db.php';
 
-include('header.php');
-include('db.php');
+// Check if user is logged in and is admin
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+    header("Location: index.php?error=Unauthorized access");
+    exit();
+}
 
-// Check if admin is logged in
+// Check if ID is provided
+if (!isset($_GET['id'])) {
+    header("Location: manage_user.php?error=No user ID provided");
+    exit();
+}
 
-// Check if the user ID is provided
-if (isset($_GET['id'])) {
-    $user_id = $_GET['id'];
+$user_id = (int) $_GET['id'];
 
-    // Prevent deleting the admin themselves
-    if ($user_id == $_SESSION['admin_id']) {
-        echo "You cannot delete your own account!";
-        exit();
-    }
+// Prevent admin from deleting themselves
+if ($user_id === (int) $_SESSION['user_id']) {
+    header("Location: manage_user.php?error=You cannot delete your own account");
+    exit();
+}
 
-    // Delete the user from the database
-    $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    
-    if ($stmt->execute()) {
-        header('Location: manage_user.php?message=User deleted successfully.');
-    } else {
-        echo "Error deleting user: " . $stmt->error;
-    }
+// Delete user
+$stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+
+if ($stmt->execute()) {
+    header("Location: manage_user.php?message=User deleted successfully");
+    exit();
 } else {
-    echo "No user ID provided.";
+    header("Location: manage_user.php?error=Error deleting user");
+    exit();
 }
 ?>

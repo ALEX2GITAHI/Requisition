@@ -44,14 +44,21 @@ if (isset($_POST['add_item_submit'])) {
 }
 
 if (isset($_POST['edit_item_submit'])) {
-    $edit_index = $_SESSION['edit_index'];
-    if (isset($_SESSION['requisition_items'][$edit_index])) {
-        $_SESSION['requisition_items'][$edit_index]['item_name'] = $_POST['edit_item_name'];
-        $_SESSION['requisition_items'][$edit_index]['item_cost'] = $_POST['edit_item_cost'];
-        $_SESSION['requisition_items'][$edit_index]['item_quantity'] = $_POST['edit_item_quantity'];
-        $_SESSION['requisition_items'][$edit_index]['total_cost'] = $_POST['edit_item_cost'] * $_POST['edit_item_quantity'];
 
-        unset($_SESSION['edit_index']); // Clear the edit index after saving
+    if (isset($_POST['edit_index']) && isset($_SESSION['requisition_items'][$_POST['edit_index']])) {
+
+        $edit_index = $_POST['edit_index'];
+
+        $item_name = $_POST['edit_item_name'];
+        $item_cost = $_POST['edit_item_cost'];
+        $item_quantity = $_POST['edit_item_quantity'];
+
+        $_SESSION['requisition_items'][$edit_index] = [
+            'item_name' => $item_name,
+            'item_cost' => $item_cost,
+            'item_quantity' => $item_quantity,
+            'total_cost' => $item_cost * $item_quantity
+        ];
     }
 }
 
@@ -75,6 +82,17 @@ if (isset($_POST['submit_requisition'])) {
 
 // Save requisition, generate PDF, and other logic goes here...
 ?>
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert alert-danger text-center">
+        <?= htmlspecialchars($_GET['error']) ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success text-center">
+        <?= htmlspecialchars($_GET['success']) ?>
+    </div>
+<?php endif; ?>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light mt-9">
         <div class="container-fluid">
@@ -145,7 +163,31 @@ if (isset($_POST['submit_requisition'])) {
                 </tbody>
             </table>
             <form action="save_requisition.php" method="POST">
-    <button type="submit" name="submit_requisition" class="btn btn-success float-end">Save Requisition</button>
+    <?php
+$can_save = true;
+if (isset($_SESSION['requisition_items'])) {
+    $current_total = 0;
+    foreach ($_SESSION['requisition_items'] as $item) {
+        $current_total += $item['total_cost'];
+    }
+    if ($current_total > $group_balance) {
+        $can_save = false;
+    }
+}
+?>
+
+<button type="submit"
+        name="submit_requisition"
+        class="btn btn-success float-end"
+        <?= !$can_save ? 'disabled' : '' ?>>
+    Save Requisition
+</button>
+
+<?php if (!$can_save): ?>
+    <div class="text-danger mt-2">
+        ⚠ Your account balance is lower. Please contact the LCC Treasurer.
+    </div>
+<?php endif; ?>
 </form>
         </div>
     </div>
