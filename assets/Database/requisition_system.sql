@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 09, 2026 at 11:52 AM
+-- Generation Time: Aug 17, 2026 at 09:08 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -165,7 +165,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `phone_number`, `password`, `role`, `group_id`) VALUES
-(1, 'admin', 'admin', 'admin', '1234567890', '$2y$10$e9ErpOoQQ6IMNJlTOLVf/eSXrXeSb6h/EOkYBfnfG1IOf8bbh3rz6', 'admin', 1),
+(1, 'admin', 'admin', 'admin', '1234567890', '$2y$10$RVUYUeEmvVPN1C3nM1DEZuANfBh.RLOD.nQVnSO39rbEt9p6.wpl.', 'admin', 1),
 (3, 'EVELYN', 'EVELYN', 'WAMBUI', '+254740731806', '$2y$10$XQpc1x4mIRBTcc/3gQfrGen2cnoSgo9e5EVR8lvQ3XOpMPAB1Gmuq', 'treasurer', 3),
 (4, 'alex', 'ALEX', 'GITAHI', '+254740731806', '$2y$10$tmOZuXIaf8gOT9xPKsUO4edYpMSuGEEA7EAyxasdM4lv85GkWmtkG', 'secretary', 3),
 (5, 'Neriah', 'Neriah', 'Gitahi', '+254740731806', '$2y$10$D4uc5r1f39k43FLdXnD9xeI1NF4fiEeAcTgQo.ica.f9O.ogXqR8e', 'chairperson', 3);
